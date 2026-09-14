@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Design references
+public/design-references/
+
+# Documentation
+docs/
+
+# macOS
+.DS_Store

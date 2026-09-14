@@ -1,0 +1,35 @@
+export default function Modal({
+  open = false,
+  title,
+  children,
+  onClose,
+  footer,
+}) {
+  if (!open) return null
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="modal-header">
+          <h2>{title}</h2>
+          <button className="icon-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {children}
+        </div>
+
+        {footer && (
+          <div className="modal-footer">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
