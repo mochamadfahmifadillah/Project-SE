@@ -8,8 +8,8 @@ import api from "./api";
 | Authenticated comparison API.
 |
 | Backend endpoints:
-| GET  /api/v1/me/comparisons
-| POST /api/v1/compare
+| GET  /me/comparisons
+| POST /compare
 |
 */
 
@@ -19,8 +19,8 @@ import api from "./api";
 |--------------------------------------------------------------------------
 */
 
-const COMPARE_ENDPOINT = "/api/v1/compare";
-const COMPARISONS_ENDPOINT = "/api/v1/me/comparisons";
+const COMPARE_ENDPOINT = "/compare";
+const COMPARISONS_ENDPOINT = "/me/comparisons";
 
 const MIN_SOFTWARE = 2;
 const MAX_SOFTWARE = 3;
@@ -34,7 +34,7 @@ const MAX_SOFTWARE = 3;
 /**
  * Get comparisons belonging to authenticated user.
  *
- * GET /api/v1/me/comparisons
+ * GET /me/comparisons
  *
  * @returns {Promise<Array>}
  */
@@ -53,7 +53,7 @@ export async function getComparisons() {
 /**
  * Compare multiple software.
  *
- * POST /api/v1/compare
+ * POST /compare
  *
  * @param {number[]} softwareIds
  * @returns {Promise<Object>}

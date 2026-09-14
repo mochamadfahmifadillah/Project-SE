@@ -26,8 +26,8 @@ export async function getSoftware(params = {}) {
 
   const response = await api.get(
     queryString
-      ? `/api/v1/software?${queryString}`
-      : "/api/v1/software",
+      ? `/software?${queryString}`
+      : "/software",
   );
 
   return response?.data?.data ?? response?.data ?? [];
@@ -40,14 +40,14 @@ export async function getSoftware(params = {}) {
 */
 
 export async function getAdminSoftware() {
-  const response = await api.get("/api/v1/admin/software");
+  const response = await api.get("/admin/software");
 
   return response?.data?.data ?? response?.data ?? [];
 }
 
 export async function createAdminSoftware(payload) {
   const response = await api.post(
-    "/api/v1/admin/software",
+    "/admin/software",
     payload,
   );
 
@@ -56,7 +56,7 @@ export async function createAdminSoftware(payload) {
 
 export async function getAdminSoftwareById(id) {
   const response = await api.get(
-    `/api/v1/admin/software/${id}`,
+    `/admin/software/${id}`,
   );
 
   return response?.data?.data ?? response?.data ?? null;
@@ -64,7 +64,7 @@ export async function getAdminSoftwareById(id) {
 
 export async function updateAdminSoftware(id, payload) {
   const response = await api.put(
-    `/api/v1/admin/software/${id}`,
+    `/admin/software/${id}`,
     payload,
   );
 
@@ -73,7 +73,7 @@ export async function updateAdminSoftware(id, payload) {
 
 export async function deleteAdminSoftware(id) {
   const response = await api.delete(
-    `/api/v1/admin/software/${id}`,
+    `/admin/software/${id}`,
   );
 
   return response?.data ?? null;
@@ -89,7 +89,7 @@ export async function getSoftwareBySlug(slug) {
   if (!slug) return null;
 
   const response = await api.get(
-    `/api/v1/software/${encodeURIComponent(slug)}`,
+    `/software/${encodeURIComponent(slug)}`,
   );
 
   return response?.data?.data ?? response?.data ?? null;

@@ -18,7 +18,7 @@ import api from "./api";
 |
 | Backend recommendation endpoint:
 |
-| POST /api/v1/recommendations
+| POST /recommendations
 |
 |--------------------------------------------------------------------------
 */
@@ -104,7 +104,7 @@ export async function getRecommendations(answers = {}) {
   |--------------------------------------------------------------------------
   */
 
-  const response = await api.post("/api/v1/recommendations", payload);
+  const response = await api.post("/recommendations", payload);
 
   console.log("Recommendation API response:", response);
 

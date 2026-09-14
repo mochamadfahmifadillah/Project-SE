@@ -8,9 +8,9 @@ import api from "./api";
 | Authenticated saved software API.
 |
 | Backend endpoints:
-| GET    /api/v1/me/saved-software
-| POST   /api/v1/me/saved-software
-| DELETE /api/v1/me/saved-software/{software}
+| GET    /me/saved-software
+| POST   /me/saved-software
+| DELETE /me/saved-software/{software}
 |
 */
 
@@ -20,7 +20,7 @@ import api from "./api";
 |--------------------------------------------------------------------------
 */
 
-const ENDPOINT = "/api/v1/me/saved-software";
+const ENDPOINT = "/me/saved-software";
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +31,7 @@ const ENDPOINT = "/api/v1/me/saved-software";
 /**
  * Get authenticated user's saved software.
  *
- * GET /api/v1/me/saved-software
+ * GET /me/saved-software
  */
 export async function getSavedSoftware() {
   const response = await api.get(ENDPOINT);
@@ -42,7 +42,7 @@ export async function getSavedSoftware() {
 /**
  * Save software to user's shortlist.
  *
- * POST /api/v1/me/saved-software
+ * POST /me/saved-software
  *
  * @param {number|string} softwareId
  */
@@ -61,7 +61,7 @@ export async function saveSoftware(softwareId) {
 /**
  * Remove software from user's shortlist.
  *
- * DELETE /api/v1/me/saved-software/{software}
+ * DELETE /me/saved-software/{software}
  *
  * @param {number|string} softwareId
  */

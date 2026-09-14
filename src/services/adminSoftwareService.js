@@ -1,6 +1,6 @@
 import api from "./api";
 
-const ADMIN_SOFTWARE_ENDPOINT = "/api/v1/admin/software";
+const ADMIN_SOFTWARE_ENDPOINT = "/admin/software";
 
 /*
 |--------------------------------------------------------------------------

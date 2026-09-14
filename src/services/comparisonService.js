@@ -8,19 +8,19 @@ import api from "./api";
 | Authenticated comparison history API.
 |
 | Backend endpoint:
-| GET /api/v1/me/comparisons
+| GET /me/comparisons
 |
 */
 
 /**
  * Get authenticated user's comparison history.
  *
- * GET /api/v1/me/comparisons
+ * GET /me/comparisons
  *
  * @returns {Promise<Array>}
  */
 export async function getComparisons() {
-  const response = await api.get("/api/v1/me/comparisons");
+  const response = await api.get("/me/comparisons");
 
   return response?.data ?? [];
 }

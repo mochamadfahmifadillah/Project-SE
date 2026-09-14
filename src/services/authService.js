@@ -7,31 +7,31 @@ import api from "./api";
 */
 
 /**
- * POST /api/v1/register
+ * POST /register
  */
 export async function registerUser(payload) {
-  return api.post("/api/v1/register", payload);
+  return api.post("/register", payload);
 }
 
 /**
- * POST /api/v1/login
+ * POST /login
  */
 export async function loginUser(payload) {
-  return api.post("/api/v1/login", payload);
+  return api.post("/login", payload);
 }
 
 /**
- * GET /api/v1/me
+ * GET /me
  */
 export async function getMe() {
-  return api.get("/api/v1/me");
+  return api.get("/me");
 }
 
 /**
- * POST /api/v1/logout
+ * POST /logout
  */
 export async function logoutUser() {
-  return api.post("/api/v1/logout");
+  return api.post("/logout");
 }
 
 export default {

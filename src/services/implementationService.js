@@ -7,8 +7,8 @@ import api from "./api";
 |
 | Backend endpoints:
 |
-| GET  /api/v1/me/implementation-requests
-| POST /api/v1/implementation-requests
+| GET  /me/implementation-requests
+| POST /implementation-requests
 |
 | Requires authentication.
 |
@@ -20,8 +20,8 @@ import api from "./api";
 |--------------------------------------------------------------------------
 */
 
-const ENDPOINT = "/api/v1/implementation-requests";
-const MY_ENDPOINT = "/api/v1/me/implementation-requests";
+const ENDPOINT = "/implementation-requests";
+const MY_ENDPOINT = "/me/implementation-requests";
 
 /*
 |--------------------------------------------------------------------------
@@ -33,7 +33,7 @@ const MY_ENDPOINT = "/api/v1/me/implementation-requests";
  * Get implementation requests belonging
  * to the authenticated user.
  *
- * GET /api/v1/me/implementation-requests
+ * GET /me/implementation-requests
  */
 export async function getImplementationRequests() {
   const response = await api.get(MY_ENDPOINT);
@@ -75,7 +75,7 @@ function validatePayload(payload) {
 /**
  * Create implementation request.
  *
- * POST /api/v1/implementation-requests
+ * POST /implementation-requests
  *
  * Body:
  * {

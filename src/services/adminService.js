@@ -6,7 +6,7 @@ import api from "./api";
 |--------------------------------------------------------------------------
 */
 
-const ADMIN_ENDPOINT = "/api/v1/admin";
+const ADMIN_ENDPOINT = "/admin";
 
 /*
 |--------------------------------------------------------------------------
@@ -15,7 +15,7 @@ const ADMIN_ENDPOINT = "/api/v1/admin";
 */
 
 /**
- * GET /api/v1/admin/dashboard
+ * GET /admin/dashboard
  */
 export async function getAdminDashboard() {
   const response = await api.get(`${ADMIN_ENDPOINT}/dashboard`);
@@ -30,7 +30,7 @@ export async function getAdminDashboard() {
 */
 
 /**
- * GET /api/v1/admin/analytics
+ * GET /admin/analytics
  *
  * Supported params:
  *
@@ -132,7 +132,7 @@ export async function getAdminAnalytics(params = {}) {
 */
 
 /**
- * GET /api/v1/admin/leads
+ * GET /admin/leads
  *
  * Supported params:
  *
@@ -177,7 +177,7 @@ export async function getAdminLeads(params = {}) {
 }
 
 /**
- * GET /api/v1/admin/leads/{id}
+ * GET /admin/leads/{id}
  */
 export async function getAdminLead(id) {
   if (!id) {
@@ -190,7 +190,7 @@ export async function getAdminLead(id) {
 }
 
 /**
- * PUT /api/v1/admin/leads/{id}
+ * PUT /admin/leads/{id}
  */
 export async function updateAdminLead(id, payload) {
   if (!id) {
@@ -203,7 +203,7 @@ export async function updateAdminLead(id, payload) {
 }
 
 /**
- * PATCH /api/v1/admin/leads/{id}/assign
+ * PATCH /admin/leads/{id}/assign
  */
 export async function assignAdminLead(id, assignedTo) {
   if (!id) {
@@ -222,7 +222,7 @@ export async function assignAdminLead(id, assignedTo) {
 }
 
 /**
- * PATCH /api/v1/admin/leads/{id}/status
+ * PATCH /admin/leads/{id}/status
  */
 export async function updateAdminLeadStatus(id, status, lostReason = null) {
   if (!id) {
@@ -250,7 +250,7 @@ export async function updateAdminLeadStatus(id, status, lostReason = null) {
 }
 
 /**
- * DELETE /api/v1/admin/leads/{id}
+ * DELETE /admin/leads/{id}
  */
 export async function deleteAdminLead(id) {
   if (!id) {
@@ -269,7 +269,7 @@ export async function deleteAdminLead(id) {
 */
 
 /**
- * GET /api/v1/admin/users
+ * GET /admin/users
  *
  * Supported params:
  *
@@ -312,7 +312,7 @@ export async function getAdminUsers(params = {}) {
 }
 
 /**
- * GET /api/v1/admin/users/{id}
+ * GET /admin/users/{id}
  */
 export async function getAdminUser(id) {
   if (!id) {
@@ -325,7 +325,7 @@ export async function getAdminUser(id) {
 }
 
 /**
- * POST /api/v1/admin/users
+ * POST /admin/users
  */
 export async function createAdminUser(payload) {
   const response = await api.post(`${ADMIN_ENDPOINT}/users`, payload);
@@ -334,7 +334,7 @@ export async function createAdminUser(payload) {
 }
 
 /**
- * PUT /api/v1/admin/users/{id}
+ * PUT /admin/users/{id}
  */
 export async function updateAdminUser(id, payload) {
   if (!id) {
@@ -347,7 +347,7 @@ export async function updateAdminUser(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/users/{id}
+ * DELETE /admin/users/{id}
  */
 export async function deleteAdminUser(id) {
   if (!id) {
@@ -366,7 +366,7 @@ export async function deleteAdminUser(id) {
 */
 
 /**
- * GET /api/v1/admin/roles
+ * GET /admin/roles
  */
 export async function getAdminRoles() {
   const response = await api.get(`${ADMIN_ENDPOINT}/roles`);
@@ -384,7 +384,7 @@ export async function getAdminRoles() {
 */
 
 /**
- * GET /api/v1/admin/vendors
+ * GET /admin/vendors
  */
 export async function getAdminVendors() {
   const response = await api.get(`${ADMIN_ENDPOINT}/vendors`);
@@ -393,7 +393,7 @@ export async function getAdminVendors() {
 }
 
 /**
- * GET /api/v1/admin/vendors/{id}
+ * GET /admin/vendors/{id}
  */
 export async function getAdminVendor(id) {
   if (!id) {
@@ -406,7 +406,7 @@ export async function getAdminVendor(id) {
 }
 
 /**
- * POST /api/v1/admin/vendors
+ * POST /admin/vendors
  */
 export async function createAdminVendor(payload) {
   const response = await api.post(`${ADMIN_ENDPOINT}/vendors`, payload);
@@ -415,7 +415,7 @@ export async function createAdminVendor(payload) {
 }
 
 /**
- * PUT /api/v1/admin/vendors/{id}
+ * PUT /admin/vendors/{id}
  */
 export async function updateAdminVendor(id, payload) {
   if (!id) {
@@ -428,7 +428,7 @@ export async function updateAdminVendor(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/vendors/{id}
+ * DELETE /admin/vendors/{id}
  */
 export async function deleteAdminVendor(id) {
   if (!id) {
@@ -447,7 +447,7 @@ export async function deleteAdminVendor(id) {
 */
 
 /**
- * GET /api/v1/admin/categories
+ * GET /admin/categories
  */
 export async function getAdminCategories() {
   const response = await api.get(`${ADMIN_ENDPOINT}/categories`);
@@ -456,7 +456,7 @@ export async function getAdminCategories() {
 }
 
 /**
- * GET /api/v1/admin/categories/{id}
+ * GET /admin/categories/{id}
  */
 export async function getAdminCategory(id) {
   if (!id) {
@@ -469,7 +469,7 @@ export async function getAdminCategory(id) {
 }
 
 /**
- * POST /api/v1/admin/categories
+ * POST /admin/categories
  */
 export async function createAdminCategory(payload) {
   const response = await api.post(`${ADMIN_ENDPOINT}/categories`, payload);
@@ -478,7 +478,7 @@ export async function createAdminCategory(payload) {
 }
 
 /**
- * PUT /api/v1/admin/categories/{id}
+ * PUT /admin/categories/{id}
  */
 export async function updateAdminCategory(id, payload) {
   if (!id) {
@@ -491,7 +491,7 @@ export async function updateAdminCategory(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/categories/{id}
+ * DELETE /admin/categories/{id}
  */
 export async function deleteAdminCategory(id) {
   if (!id) {
@@ -510,7 +510,7 @@ export async function deleteAdminCategory(id) {
 */
 
 /**
- * GET /api/v1/admin/features
+ * GET /admin/features
  */
 export async function getAdminFeatures() {
   const response = await api.get(`${ADMIN_ENDPOINT}/features`);
@@ -519,7 +519,7 @@ export async function getAdminFeatures() {
 }
 
 /**
- * GET /api/v1/admin/features/{id}
+ * GET /admin/features/{id}
  */
 export async function getAdminFeature(id) {
   if (!id) {
@@ -532,7 +532,7 @@ export async function getAdminFeature(id) {
 }
 
 /**
- * POST /api/v1/admin/features
+ * POST /admin/features
  */
 export async function createAdminFeature(payload) {
   const response = await api.post(`${ADMIN_ENDPOINT}/features`, payload);
@@ -541,7 +541,7 @@ export async function createAdminFeature(payload) {
 }
 
 /**
- * PUT /api/v1/admin/features/{id}
+ * PUT /admin/features/{id}
  */
 export async function updateAdminFeature(id, payload) {
   if (!id) {
@@ -554,7 +554,7 @@ export async function updateAdminFeature(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/features/{id}
+ * DELETE /admin/features/{id}
  */
 export async function deleteAdminFeature(id) {
   if (!id) {
@@ -573,7 +573,7 @@ export async function deleteAdminFeature(id) {
 */
 
 /**
- * GET /api/v1/admin/industries
+ * GET /admin/industries
  */
 export async function getAdminIndustries() {
   const response = await api.get(`${ADMIN_ENDPOINT}/industries`);
@@ -582,7 +582,7 @@ export async function getAdminIndustries() {
 }
 
 /**
- * GET /api/v1/admin/industries/{id}
+ * GET /admin/industries/{id}
  */
 export async function getAdminIndustry(id) {
   if (!id) {
@@ -595,7 +595,7 @@ export async function getAdminIndustry(id) {
 }
 
 /**
- * POST /api/v1/admin/industries
+ * POST /admin/industries
  */
 export async function createAdminIndustry(payload) {
   const response = await api.post(`${ADMIN_ENDPOINT}/industries`, payload);
@@ -604,7 +604,7 @@ export async function createAdminIndustry(payload) {
 }
 
 /**
- * PUT /api/v1/admin/industries/{id}
+ * PUT /admin/industries/{id}
  */
 export async function updateAdminIndustry(id, payload) {
   if (!id) {
@@ -617,7 +617,7 @@ export async function updateAdminIndustry(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/industries/{id}
+ * DELETE /admin/industries/{id}
  */
 export async function deleteAdminIndustry(id) {
   if (!id) {
@@ -636,7 +636,7 @@ export async function deleteAdminIndustry(id) {
 */
 
 /**
- * GET /api/v1/admin/business-sizes
+ * GET /admin/business-sizes
  */
 export async function getAdminBusinessSizes() {
   const response = await api.get(`${ADMIN_ENDPOINT}/business-sizes`);
@@ -645,7 +645,7 @@ export async function getAdminBusinessSizes() {
 }
 
 /**
- * GET /api/v1/admin/business-sizes/{id}
+ * GET /admin/business-sizes/{id}
  */
 export async function getAdminBusinessSize(id) {
   if (!id) {
@@ -658,7 +658,7 @@ export async function getAdminBusinessSize(id) {
 }
 
 /**
- * POST /api/v1/admin/business-sizes
+ * POST /admin/business-sizes
  */
 export async function createAdminBusinessSize(payload) {
   const response = await api.post(`${ADMIN_ENDPOINT}/business-sizes`, payload);
@@ -667,7 +667,7 @@ export async function createAdminBusinessSize(payload) {
 }
 
 /**
- * PUT /api/v1/admin/business-sizes/{id}
+ * PUT /admin/business-sizes/{id}
  */
 export async function updateAdminBusinessSize(id, payload) {
   if (!id) {
@@ -683,7 +683,7 @@ export async function updateAdminBusinessSize(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/business-sizes/{id}
+ * DELETE /admin/business-sizes/{id}
  */
 export async function deleteAdminBusinessSize(id) {
   if (!id) {
@@ -702,7 +702,7 @@ export async function deleteAdminBusinessSize(id) {
 */
 
 /**
- * GET /api/v1/admin/integrations
+ * GET /admin/integrations
  */
 export async function getAdminIntegrations() {
   const response = await api.get(`${ADMIN_ENDPOINT}/integrations`);
@@ -711,7 +711,7 @@ export async function getAdminIntegrations() {
 }
 
 /**
- * GET /api/v1/admin/integrations/{id}
+ * GET /admin/integrations/{id}
  */
 export async function getAdminIntegration(id) {
   if (!id) {
@@ -724,7 +724,7 @@ export async function getAdminIntegration(id) {
 }
 
 /**
- * POST /api/v1/admin/integrations
+ * POST /admin/integrations
  */
 export async function createAdminIntegration(payload) {
   const response = await api.post(`${ADMIN_ENDPOINT}/integrations`, payload);
@@ -733,7 +733,7 @@ export async function createAdminIntegration(payload) {
 }
 
 /**
- * PUT /api/v1/admin/integrations/{id}
+ * PUT /admin/integrations/{id}
  */
 export async function updateAdminIntegration(id, payload) {
   if (!id) {
@@ -749,7 +749,7 @@ export async function updateAdminIntegration(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/integrations/{id}
+ * DELETE /admin/integrations/{id}
  */
 export async function deleteAdminIntegration(id) {
   if (!id) {
@@ -768,7 +768,7 @@ export async function deleteAdminIntegration(id) {
 */
 
 /**
- * GET /api/v1/admin/partners
+ * GET /admin/partners
  */
 export async function getAdminPartners() {
   const response = await api.get(`${ADMIN_ENDPOINT}/partners`);
@@ -777,7 +777,7 @@ export async function getAdminPartners() {
 }
 
 /**
- * GET /api/v1/admin/partners/{id}
+ * GET /admin/partners/{id}
  */
 export async function getAdminPartner(id) {
   if (!id) {
@@ -790,7 +790,7 @@ export async function getAdminPartner(id) {
 }
 
 /**
- * POST /api/v1/admin/partners
+ * POST /admin/partners
  */
 export async function createAdminPartner(payload) {
   const response = await api.post(`${ADMIN_ENDPOINT}/partners`, payload);
@@ -799,7 +799,7 @@ export async function createAdminPartner(payload) {
 }
 
 /**
- * PUT /api/v1/admin/partners/{id}
+ * PUT /admin/partners/{id}
  */
 export async function updateAdminPartner(id, payload) {
   if (!id) {
@@ -812,7 +812,7 @@ export async function updateAdminPartner(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/partners/{id}
+ * DELETE /admin/partners/{id}
  */
 export async function deleteAdminPartner(id) {
   if (!id) {
@@ -831,7 +831,7 @@ export async function deleteAdminPartner(id) {
 */
 
 /**
- * GET /api/v1/admin/articles
+ * GET /admin/articles
  *
  * Supported params:
  *
@@ -873,7 +873,7 @@ export async function getAdminArticles(params = {}) {
 }
 
 /**
- * GET /api/v1/admin/articles/{id}
+ * GET /admin/articles/{id}
  */
 export async function getAdminArticle(id) {
   if (!id) {
@@ -886,7 +886,7 @@ export async function getAdminArticle(id) {
 }
 
 /**
- * POST /api/v1/admin/articles
+ * POST /admin/articles
  */
 export async function createAdminArticle(payload) {
   const response = await api.post(`${ADMIN_ENDPOINT}/articles`, payload);
@@ -895,7 +895,7 @@ export async function createAdminArticle(payload) {
 }
 
 /**
- * PUT /api/v1/admin/articles/{id}
+ * PUT /admin/articles/{id}
  */
 export async function updateAdminArticle(id, payload) {
   if (!id) {
@@ -908,7 +908,7 @@ export async function updateAdminArticle(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/articles/{id}
+ * DELETE /admin/articles/{id}
  */
 export async function deleteAdminArticle(id) {
   if (!id) {
@@ -927,7 +927,7 @@ export async function deleteAdminArticle(id) {
 */
 
 /**
- * GET /api/v1/admin/reviews
+ * GET /admin/reviews
  */
 export async function getAdminReviews(params = {}) {
   const query = new URLSearchParams();
@@ -967,7 +967,7 @@ export async function getAdminReviews(params = {}) {
 }
 
 /**
- * GET /api/v1/admin/reviews/{id}
+ * GET /admin/reviews/{id}
  */
 export async function getAdminReview(id) {
   if (!id) {
@@ -980,7 +980,7 @@ export async function getAdminReview(id) {
 }
 
 /**
- * PUT /api/v1/admin/reviews/{id}
+ * PUT /admin/reviews/{id}
  */
 export async function updateAdminReview(id, payload) {
   if (!id) {
@@ -993,7 +993,7 @@ export async function updateAdminReview(id, payload) {
 }
 
 /**
- * DELETE /api/v1/admin/reviews/{id}
+ * DELETE /admin/reviews/{id}
  */
 export async function deleteAdminReview(id) {
   if (!id) {
@@ -1012,7 +1012,7 @@ export async function deleteAdminReview(id) {
 */
 
 /**
- * GET /api/v1/admin/audit-logs
+ * GET /admin/audit-logs
  *
  * Supported params:
  *
@@ -1072,7 +1072,7 @@ export async function getAdminAuditLogs(params = {}) {
 }
 
 /**
- * GET /api/v1/admin/audit-logs/{id}
+ * GET /admin/audit-logs/{id}
  *
  * Get audit log detail.
  */
