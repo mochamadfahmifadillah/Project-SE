@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import Icon from "../../components/common/Icon";
-import { useAuth } from "../../context/AuthContext";
-
+import { useAuthContext } from "../../context/AuthContext";
 export default function Profile() {
   const { getMe } = useAuthContext();
 
