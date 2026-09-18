@@ -26,8 +26,10 @@ import Account from "../pages/account/Account";
 import Profile from "../pages/account/Profile";
 import SavedSoftware from "../pages/account/SavedSoftware";
 import Comparisons from "../pages/account/Comparisons";
+import Reviews from "../pages/account/Reviews";
 import ImplementationRequests from "../pages/account/ImplementationRequests";
 import Settings from "../pages/account/Settings";
+
 import AccountLayout from "../layouts/AccountLayout";
 
 // ============================================================
@@ -44,7 +46,7 @@ import Features from "../pages/admin/Features";
 import Industries from "../pages/admin/Industries";
 import Integrations from "../pages/admin/Integrations";
 import Partners from "../pages/admin/Partners";
-import Reviews from "../pages/admin/Reviews";
+import AdminReviews from "../pages/admin/Reviews";
 import AdminSettings from "../pages/admin/Settings";
 import Software from "../pages/admin/Software";
 import UsersRoles from "../pages/admin/UsersRoles";
@@ -62,11 +64,9 @@ import { useAuthContext } from "../context/AuthContext";
 function AdminGuard({ children }) {
   const { loading, isAuthenticated, hasRole } = useAuthContext();
 
-  /*
-  |--------------------------------------------------------------------------
-  | Authentication Loading
-  |--------------------------------------------------------------------------
-  */
+  // ----------------------------------------------------------
+  // Authentication Loading
+  // ----------------------------------------------------------
 
   if (loading) {
     return (
@@ -77,45 +77,25 @@ function AdminGuard({ children }) {
     );
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Authentication Check
-  |--------------------------------------------------------------------------
-  */
+  // ----------------------------------------------------------
+  // Authentication Check
+  // ----------------------------------------------------------
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | RBAC Role Check
-  |--------------------------------------------------------------------------
-  |
-  | AuthContext membaca role dari:
-  |
-  | user.roles[].name
-  |
-  | Backend:
-  |
-  | roles: [
-  |   {
-  |     name: "admin",
-  |     permissions: [...]
-  |   }
-  | ]
-  |
-  */
+  // ----------------------------------------------------------
+  // RBAC Role Check
+  // ----------------------------------------------------------
 
   if (!hasRole("admin")) {
     return <Navigate to="/" replace />;
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Authorized
-  |--------------------------------------------------------------------------
-  */
+  // ----------------------------------------------------------
+  // Authorized
+  // ----------------------------------------------------------
 
   return children;
 }
@@ -127,11 +107,9 @@ function AdminGuard({ children }) {
 function AccountGuard({ children }) {
   const { loading, isAuthenticated } = useAuthContext();
 
-  /*
-  |--------------------------------------------------------------------------
-  | Loading
-  |--------------------------------------------------------------------------
-  */
+  // ----------------------------------------------------------
+  // Authentication Loading
+  // ----------------------------------------------------------
 
   if (loading) {
     return (
@@ -142,25 +120,19 @@ function AccountGuard({ children }) {
     );
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Authentication
-  |--------------------------------------------------------------------------
-  */
+  // ----------------------------------------------------------
+  // Authentication Check
+  // ----------------------------------------------------------
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
+  // ----------------------------------------------------------
+  // Authorized
+  // ----------------------------------------------------------
+
   return children;
-}
-
-// ============================================================
-// ACCOUNT PAGE WRAPPER
-// ============================================================
-
-function AccountPage({ children }) {
-  return <AccountLayout>{children}</AccountLayout>;
 }
 
 // ============================================================
@@ -177,105 +149,197 @@ function App() {
 
         <Route path="/" element={<Home />} />
 
-        <Route path="/software" element={<SoftwareDirectory />} />
+        <Route
+          path="/software"
+          element={<SoftwareDirectory />}
+        />
 
-        <Route path="/software/:slug" element={<SoftwareDetail />} />
+        <Route
+          path="/software/:slug"
+          element={<SoftwareDetail />}
+        />
 
-        <Route path="/compare" element={<Compare />} />
+        <Route
+          path="/compare"
+          element={<Compare />}
+        />
 
-        <Route path="/recommend" element={<Recommend />} />
+        <Route
+          path="/recommend"
+          element={<Recommend />}
+        />
 
         <Route
           path="/recommendation-result"
           element={<RecommendationResult />}
         />
 
-        <Route path="/implementation" element={<Implementation />} />
+        <Route
+          path="/implementation"
+          element={<Implementation />}
+        />
 
-        <Route path="/learn" element={<Learn />} />
+        <Route
+          path="/learn"
+          element={<Learn />}
+        />
 
-        <Route path="/learn/:slug" element={<ArticleDetail />} />
+        <Route
+          path="/learn/:slug"
+          element={<ArticleDetail />}
+        />
 
         {/* ======================================================
             AUTHENTICATION
         ====================================================== */}
 
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/login"
+          element={<Login />}
+        />
 
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/register"
+          element={<Register />}
+        />
 
         {/* ======================================================
             ACCOUNT
         ====================================================== */}
 
-        {/* Account Overview */}
+        {/* ------------------------------------------------------
+            Account Overview
+        ------------------------------------------------------ */}
+
         <Route
           path="/account"
           element={
             <AccountGuard>
-              <AccountPage>
+              <AccountLayout>
                 <Account />
-              </AccountPage>
+              </AccountLayout>
             </AccountGuard>
           }
         />
 
-        {/* Profile */}
+        {/* ------------------------------------------------------
+            Profile
+        ------------------------------------------------------ */}
+
         <Route
           path="/account/profile"
           element={
             <AccountGuard>
-              <AccountPage>
+              <AccountLayout>
                 <Profile />
-              </AccountPage>
+              </AccountLayout>
             </AccountGuard>
           }
         />
 
-        {/* Saved Software */}
+        {/* ------------------------------------------------------
+            Saved Software
+        ------------------------------------------------------ */}
+
         <Route
           path="/account/saved"
           element={
             <AccountGuard>
-              <AccountPage>
+              <AccountLayout>
                 <SavedSoftware />
-              </AccountPage>
+              </AccountLayout>
             </AccountGuard>
           }
         />
 
-        {/* My Comparisons */}
+        {/* ------------------------------------------------------
+            My Comparisons
+        ------------------------------------------------------ */}
+
         <Route
           path="/account/comparisons"
           element={
             <AccountGuard>
-              <AccountPage>
+              <AccountLayout>
                 <Comparisons />
-              </AccountPage>
+              </AccountLayout>
             </AccountGuard>
           }
         />
 
-        {/* Implementation Requests */}
+        {/* ------------------------------------------------------
+            My Reviews
+        ------------------------------------------------------ */}
+
+        <Route
+          path="/account/reviews"
+          element={
+            <AccountGuard>
+              <AccountLayout>
+                <Reviews />
+              </AccountLayout>
+            </AccountGuard>
+          }
+        />
+
+        {/* ------------------------------------------------------
+            Implementation Requests
+        ------------------------------------------------------ */}
+
         <Route
           path="/account/implementations"
           element={
             <AccountGuard>
-              <AccountPage>
+              <AccountLayout>
                 <ImplementationRequests />
-              </AccountPage>
+              </AccountLayout>
             </AccountGuard>
           }
         />
 
-        {/* Account Settings */}
+        {/* ------------------------------------------------------
+            Account Settings
+        ------------------------------------------------------ */}
+
         <Route
           path="/account/settings"
           element={
             <AccountGuard>
-              <AccountPage>
+              <AccountLayout>
                 <Settings />
-              </AccountPage>
+              </AccountLayout>
+            </AccountGuard>
+          }
+        />
+
+        {/* ------------------------------------------------------
+            Account Recommendations
+        ------------------------------------------------------ */}
+
+        <Route
+          path="/account/recommendations"
+          element={
+            <AccountGuard>
+              <Navigate
+                to="/recommendation-result"
+                replace
+              />
+            </AccountGuard>
+          }
+        />
+
+        {/* ------------------------------------------------------
+            Account Notifications
+        ------------------------------------------------------ */}
+
+        <Route
+          path="/account/notifications"
+          element={
+            <AccountGuard>
+              <Navigate
+                to="/account"
+                replace
+              />
             </AccountGuard>
           }
         />
@@ -283,6 +347,10 @@ function App() {
         {/* ======================================================
             ADMIN
         ====================================================== */}
+
+        {/* ------------------------------------------------------
+            Dashboard
+        ------------------------------------------------------ */}
 
         <Route
           path="/admin"
@@ -377,7 +445,7 @@ function App() {
           path="/admin/reviews"
           element={
             <AdminGuard>
-              <Reviews />
+              <AdminReviews />
             </AdminGuard>
           }
         />
@@ -488,11 +556,24 @@ function App() {
             LEGACY REDIRECTS
         ====================================================== */}
 
-        <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
+        <Route
+          path="/dashboard"
+          element={
+            <Navigate
+              to="/admin"
+              replace
+            />
+          }
+        />
 
         <Route
           path="/admin/implementation"
-          element={<Navigate to="/admin/implementation-leads" replace />}
+          element={
+            <Navigate
+              to="/admin/implementation-leads"
+              replace
+            />
+          }
         />
 
         {/* ======================================================
@@ -513,9 +594,13 @@ function App() {
               <div style={{ textAlign: "center" }}>
                 <h1>Route Not Found</h1>
 
-                <p>Current URL: {window.location.pathname}</p>
+                <p>
+                  Current URL: {window.location.pathname}
+                </p>
 
-                <a href="/">Back to Home</a>
+                <a href="/">
+                  Back to Home
+                </a>
               </div>
             </div>
           }

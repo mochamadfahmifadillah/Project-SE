@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Building2, Mail, UserRound } from "lucide-react";
 
-import AccountLayout from "../../layouts/AccountLayout";
 import Button from "../../components/common/Button";
 
 import { getMe } from "../../services/authService";
@@ -135,149 +134,147 @@ export default function Settings() {
       .toUpperCase() || "U";
 
   return (
-    <AccountLayout>
-      <main className="page narrow">
-        {/* =====================================================
-            HEADER
-        ====================================================== */}
-        <div className="page-head">
-          <div>
-            <span className="eyebrow">MY ACCOUNT</span>
+    <main className="page narrow">
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
+      <div className="page-head">
+        <div>
+          <span className="eyebrow">MY ACCOUNT</span>
 
-            <h1>Settings</h1>
+          <h1>Settings</h1>
 
-            <p>Manage your account information and preferences.</p>
-          </div>
+          <p>Manage your account information and preferences.</p>
         </div>
+      </div>
 
-        {/* =====================================================
-            ERROR
-        ====================================================== */}
-        {error && (
-          <div className="auth-error" role="alert">
-            <strong>Something went wrong</strong>
+      {/* =====================================================
+          ERROR
+      ====================================================== */}
+      {error && (
+        <div className="auth-error" role="alert">
+          <strong>Something went wrong</strong>
 
-            <span>{error}</span>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* =====================================================
+          SETTINGS CARD
+      ====================================================== */}
+      <div className="form-card settings-form-card">
+        {loading ? (
+          <div className="empty">
+            <div className="software-logo settings-loading-logo">...</div>
+
+            <h3>Loading your settings...</h3>
+
+            <p>Please wait while we load your account information.</p>
           </div>
-        )}
+        ) : (
+          <>
+            {/* PROFILE SUMMARY */}
+            <div className="settings-profile">
+              <div className="settings-avatar">{initials}</div>
 
-        {/* =====================================================
-            SETTINGS CARD
-        ====================================================== */}
-        <div className="form-card settings-form-card">
-          {loading ? (
-            <div className="empty">
-              <div className="software-logo settings-loading-logo">...</div>
+              <div>
+                <span className="eyebrow">ACCOUNT PROFILE</span>
 
-              <h3>Loading your settings...</h3>
+                <h2>{form.name || "Your account"}</h2>
 
-              <p>Please wait while we load your account information.</p>
+                <p>{form.email || "No email address available"}</p>
+              </div>
             </div>
-          ) : (
-            <>
-              {/* PROFILE SUMMARY */}
-              <div className="settings-profile">
-                <div className="settings-avatar">{initials}</div>
 
+            {/* DIVIDER */}
+            <div className="settings-divider" />
+
+            {/* FORM */}
+            <form onSubmit={handleSave}>
+              <div className="settings-section-head">
                 <div>
-                  <span className="eyebrow">ACCOUNT PROFILE</span>
+                  <span className="eyebrow">PROFILE INFORMATION</span>
 
-                  <h2>{form.name || "Your account"}</h2>
+                  <h2>Personal details</h2>
 
-                  <p>{form.email || "No email address available"}</p>
+                  <p>Keep your account information up to date.</p>
                 </div>
               </div>
 
-              {/* DIVIDER */}
-              <div className="settings-divider" />
+              <div className="form-grid">
+                {/* NAME */}
+                <label>
+                  <span className="settings-label">
+                    <UserRound size={15} />
+                    Full name
+                  </span>
 
-              {/* FORM */}
-              <form onSubmit={handleSave}>
-                <div className="settings-section-head">
-                  <div>
-                    <span className="eyebrow">PROFILE INFORMATION</span>
+                  <input
+                    type="text"
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    placeholder="Your full name"
+                    autoComplete="name"
+                  />
+                </label>
 
-                    <h2>Personal details</h2>
+                {/* EMAIL */}
+                <label>
+                  <span className="settings-label">
+                    <Mail size={15} />
+                    Email
+                  </span>
 
-                    <p>Keep your account information up to date.</p>
-                  </div>
-                </div>
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="your@email.com"
+                    autoComplete="email"
+                  />
+                </label>
 
-                <div className="form-grid">
-                  {/* NAME */}
-                  <label>
-                    <span className="settings-label">
-                      <UserRound size={15} />
-                      Full name
-                    </span>
+                {/* COMPANY */}
+                <label className="full">
+                  <span className="settings-label">
+                    <Building2 size={15} />
+                    Company
+                  </span>
 
-                    <input
-                      type="text"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      placeholder="Your full name"
-                      autoComplete="name"
-                    />
-                  </label>
+                  <input
+                    type="text"
+                    name="company"
+                    value={form.company}
+                    onChange={handleChange}
+                    placeholder="Your company"
+                    autoComplete="organization"
+                  />
 
-                  {/* EMAIL */}
-                  <label>
-                    <span className="settings-label">
-                      <Mail size={15} />
-                      Email
-                    </span>
+                  <small>
+                    Your company information helps us provide more relevant
+                    software recommendations.
+                  </small>
+                </label>
+              </div>
 
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      placeholder="your@email.com"
-                      autoComplete="email"
-                    />
-                  </label>
+              {/* ACTIONS */}
+              <div className="form-actions settings-actions">
+                {saved && (
+                  <span className="success-text">
+                    ✓ Settings saved successfully.
+                  </span>
+                )}
 
-                  {/* COMPANY */}
-                  <label className="full">
-                    <span className="settings-label">
-                      <Building2 size={15} />
-                      Company
-                    </span>
-
-                    <input
-                      type="text"
-                      name="company"
-                      value={form.company}
-                      onChange={handleChange}
-                      placeholder="Your company"
-                      autoComplete="organization"
-                    />
-
-                    <small>
-                      Your company information helps us provide more relevant
-                      software recommendations.
-                    </small>
-                  </label>
-                </div>
-
-                {/* ACTIONS */}
-                <div className="form-actions settings-actions">
-                  {saved && (
-                    <span className="success-text">
-                      ✓ Settings saved successfully.
-                    </span>
-                  )}
-
-                  <Button type="submit" disabled={saving}>
-                    {saving ? "Saving..." : "Save Changes"}
-                  </Button>
-                </div>
-              </form>
-            </>
-          )}
-        </div>
-      </main>
-    </AccountLayout>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </main>
   );
 }

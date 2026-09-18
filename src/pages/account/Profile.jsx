@@ -1,7 +1,29 @@
-import { useEffect, useMemo, useState } from "react";
-
+import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../../components/common/Icon";
 import { useAuthContext } from "../../context/AuthContext";
+
+const TABS = [
+  {
+    id: "personal",
+    label: "Personal Information",
+    icon: "user",
+  },
+  {
+    id: "business",
+    label: "Business Profile",
+    icon: "briefcase",
+  },
+  {
+    id: "preferences",
+    label: "Preferences",
+    icon: "settings",
+  },
+  {
+    id: "security",
+    label: "Account Security",
+    icon: "lock",
+  },
+];
 
 function Profile() {
   const {
@@ -14,6 +36,10 @@ function Profile() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -26,12 +52,6 @@ function Profile() {
     business_need: "",
     bio: "",
   });
-
-  /*
-  |--------------------------------------------------------------------------
-  | Sync authenticated user -> profile form
-  |--------------------------------------------------------------------------
-  */
 
   useEffect(() => {
     if (!authUser) return;
@@ -49,71 +69,33 @@ function Profile() {
     });
   }, [authUser]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Loading authentication
-  |--------------------------------------------------------------------------
-  */
-
-  if (authLoading) {
-    return (
-      <div className="profile-page">
-        <div className="account-state">
-          <h2>Checking authentication...</h2>
-          <p>Please wait.</p>
-        </div>
-      </div>
-    );
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | User not found
-  |--------------------------------------------------------------------------
-  */
-
-  if (!authUser) {
-    return (
-      <div className="profile-page">
-        <div className="account-state">
-          <h2>Profile unavailable</h2>
-          <p>We could not load the authenticated user profile.</p>
-        </div>
-      </div>
-    );
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Helpers
-  |--------------------------------------------------------------------------
-  */
-
-  const fullName = authUser.name || "—";
-  const email = authUser.email || "—";
+  const fullName = authUser?.name || "User";
+  const email = authUser?.email || "—";
 
   const avatar =
-    authUser.avatar ||
-    authUser.avatar_url ||
-    authUser.profile_picture ||
-    authUser.profilePicture ||
+    avatarPreview ||
+    authUser?.avatar ||
+    authUser?.avatar_url ||
+    authUser?.profile_picture ||
+    authUser?.profilePicture ||
     null;
 
   const initials = useMemo(() => {
-    if (!fullName || fullName === "—") return "U";
-
-    return fullName
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((word) => word.charAt(0))
-      .join("")
-      .toUpperCase();
+    return (
+      fullName
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((word) => word.charAt(0))
+        .join("")
+        .toUpperCase() || "U"
+    );
   }, [fullName]);
 
-  const memberSince = authUser.created_at
+  const memberSince = authUser?.created_at
     ? new Date(authUser.created_at).toLocaleDateString("en-US", {
         month: "long",
+        day: "numeric",
         year: "numeric",
       })
     : "—";
@@ -138,11 +120,18 @@ function Profile() {
     (completedFields / profileFields.length) * 100,
   );
 
-  /*
-  |--------------------------------------------------------------------------
-  | Change handler
-  |--------------------------------------------------------------------------
-  */
+  const interests = (formData.business_need || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+
+  const comparisons =
+    authUser?.total_comparisons ?? authUser?.comparisons_count ?? "—";
+
+  const recommendations = authUser?.recommendations_count ?? "—";
+
+  const reviews = authUser?.reviews_count ?? "—";
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -156,11 +145,25 @@ function Profile() {
     setErrorMessage("");
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Save profile
-  |--------------------------------------------------------------------------
-  */
+  const handleAvatarChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("Please select a JPG, PNG, or GIF image.");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setErrorMessage("Avatar image must be smaller than 2MB.");
+      return;
+    }
+
+    setAvatarPreview(URL.createObjectURL(file));
+    setSaveStatus("");
+    setErrorMessage("");
+  };
 
   const handleSaveProfile = async (event) => {
     event.preventDefault();
@@ -202,7 +205,7 @@ function Profile() {
 
       setSaveStatus("Profile updated successfully.");
 
-      setTimeout(() => {
+      window.setTimeout(() => {
         setSaveStatus("");
       }, 3000);
     } catch (error) {
@@ -216,65 +219,93 @@ function Profile() {
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Public profile
-  |--------------------------------------------------------------------------
-  */
-
   const handleViewPublicProfile = () => {
     if (!authUser?.id) return;
 
     window.open(`/profile/${authUser.id}`, "_blank", "noopener,noreferrer");
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Render
-  |--------------------------------------------------------------------------
-  */
-
-  return (
-    <div className="profile-page">
-      {/* ======================================================
-          PROFILE HEADER
-      ====================================================== */}
-
-      <section className="profile-header">
-        <div className="profile-header-main">
-          <div className="profile-avatar">
-            {avatar ? (
-              <img src={avatar} alt={fullName} />
-            ) : (
-              <span>{initials}</span>
-            )}
-          </div>
-
-          <div className="profile-header-info">
-            <h1>{fullName}</h1>
-
-            <p>{email}</p>
-
-            <span className="profile-member">Member since {memberSince}</span>
-          </div>
+  const renderAvatar = () => {
+    return (
+      <div className="profile-avatar-wrapper">
+        <div className="profile-avatar">
+          {avatar ? <img src={avatar} alt={fullName} /> : initials}
         </div>
 
         <button
           type="button"
-          className="profile-public-button"
-          onClick={handleViewPublicProfile}
+          onClick={() => fileInputRef.current?.click()}
+          className="profile-avatar-button"
+          aria-label="Upload avatar"
         >
-          <Icon name="external-link" />
-          View Public Profile
+          <Icon name="camera" />
         </button>
-      </section>
+      </div>
+    );
+  };
 
-      {/* ======================================================
-          PROFILE COMPLETENESS
-      ====================================================== */}
+  if (authLoading) {
+    return (
+      <div className="profile-state">
+        <div className="profile-state-content">
+          <h2>Checking authentication...</h2>
+          <p>Please wait.</p>
+        </div>
+      </div>
+    );
+  }
 
-      <section className="profile-completion-card">
-        <div className="profile-completion-info">
+  if (!authUser) {
+    return (
+      <div className="profile-state">
+        <div className="profile-state-content">
+          <h2>Profile unavailable</h2>
+          <p>We could not load the authenticated user profile.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="profile-page">
+      {/* Hidden avatar input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/gif"
+        className="profile-file-input"
+        onChange={handleAvatarChange}
+      />
+
+      {/* HEADER */}
+      <div className="profile-header">
+        <div className="profile-header-content">
+          <div className="profile-breadcrumb">
+            <span>Home</span>
+            <span>›</span>
+            <span>Account</span>
+            <span>›</span>
+            <span className="active">Profile</span>
+          </div>
+
+          <h1>Profile</h1>
+
+          <p>Manage your personal and business information</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleViewPublicProfile}
+          className="profile-outline-button"
+        >
+          View Public Profile
+          <Icon name="external-link" />
+        </button>
+      </div>
+
+      {/* COMPLETENESS */}
+      <section className="profile-card profile-completeness">
+        <div className="profile-completeness-header">
           <div>
             <h3>Profile Completeness</h3>
 
@@ -287,7 +318,7 @@ function Profile() {
           <strong>{profileCompleteness}%</strong>
         </div>
 
-        <div className="profile-progress-track">
+        <div className="profile-progress">
           <div
             className="profile-progress-bar"
             style={{
@@ -297,221 +328,287 @@ function Profile() {
         </div>
       </section>
 
-      {/* ======================================================
-          TABS
-      ====================================================== */}
-
-      <div className="profile-tabs">
-        <button
-          type="button"
-          className={
-            activeTab === "personal" ? "profile-tab active" : "profile-tab"
-          }
-          onClick={() => setActiveTab("personal")}
-        >
-          Personal Information
-        </button>
-
-        <button
-          type="button"
-          className={
-            activeTab === "business" ? "profile-tab active" : "profile-tab"
-          }
-          onClick={() => setActiveTab("business")}
-        >
-          Business Information
-        </button>
-
-        <button
-          type="button"
-          className={
-            activeTab === "preferences" ? "profile-tab active" : "profile-tab"
-          }
-          onClick={() => setActiveTab("preferences")}
-        >
-          Preferences
-        </button>
-
-        <button
-          type="button"
-          className={
-            activeTab === "security" ? "profile-tab active" : "profile-tab"
-          }
-          onClick={() => setActiveTab("security")}
-        >
-          Security
-        </button>
+      {/* TABS */}
+      <div className="profile-tabs-wrapper">
+        <div className="profile-tabs">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`profile-tab ${activeTab === tab.id ? "active" : ""}`}
+            >
+              <Icon name={tab.icon} />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ======================================================
-          PERSONAL INFORMATION
-      ====================================================== */}
-
+      {/* PERSONAL */}
       {activeTab === "personal" && (
-        <form className="profile-section" onSubmit={handleSaveProfile}>
-          <div className="profile-section-header">
-            <div>
-              <h2>Personal Information</h2>
+        <form onSubmit={handleSaveProfile} className="profile-form">
+          <div className="profile-personal-grid">
+            {/* PERSONAL INFORMATION */}
+            <section className="profile-card">
+              <div className="profile-section-header">
+                <h2>Personal Information</h2>
 
-              <p>Manage your personal information and contact details.</p>
-            </div>
+                <p>Manage your personal information and contact details.</p>
+              </div>
+
+              <div className="profile-personal-layout">
+                <div className="profile-avatar-column">
+                  {renderAvatar()}
+
+                  <p className="profile-avatar-help">
+                    JPG, PNG or GIF.
+                    <br />
+                    Max size 2MB
+                  </p>
+                </div>
+
+                <div className="profile-fields-grid">
+                  <div className="profile-field">
+                    <label htmlFor="name">Full Name</label>
+
+                    <input
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="email">Email Address</label>
+
+                    <div className="profile-email">
+                      <input id="email" type="email" value={email} disabled />
+
+                      <span>Verified</span>
+                    </div>
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="phone">Phone Number</label>
+
+                    <input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="Enter your phone number"
+                    />
+                  </div>
+
+                  <div className="profile-field">
+                    <label htmlFor="job_title">Job Title</label>
+
+                    <input
+                      id="job_title"
+                      name="job_title"
+                      value={formData.job_title}
+                      onChange={handleChange}
+                      placeholder="e.g. Product Manager"
+                    />
+                  </div>
+
+                  <div className="profile-field full">
+                    <label htmlFor="location">Location</label>
+
+                    <input
+                      id="location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      placeholder="e.g. Bandung, Indonesia"
+                    />
+                  </div>
+
+                  <div className="profile-form-action full">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="profile-primary-button"
+                    >
+                      <Icon name="check" />
+                      {saving ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* ABOUT */}
+            <section className="profile-card">
+              <div className="profile-section-header">
+                <h2>About You</h2>
+
+                <p>Tell us about yourself.</p>
+              </div>
+
+              <div className="profile-field">
+                <label htmlFor="bio">Bio</label>
+
+                <textarea
+                  id="bio"
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleChange}
+                  rows={5}
+                  maxLength={1000}
+                  placeholder="Tell us a little about yourself..."
+                />
+
+                <div className="profile-counter">
+                  {formData.bio.length}/1000
+                </div>
+              </div>
+
+              <div className="profile-interest-section">
+                <div className="profile-interest-title">Areas of Interest</div>
+
+                <div className="profile-interest-list">
+                  {interests.length ? (
+                    interests.map((interest) => (
+                      <span key={interest} className="profile-interest">
+                        {interest}
+
+                        <button type="button" aria-label={`Remove ${interest}`}>
+                          ×
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="profile-interest-empty">
+                      Add your interests from Business Profile
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="profile-divider" />
+
+              <div className="profile-setting">
+                <div>
+                  <h3>Email Notifications</h3>
+
+                  <p>Receive updates about new software and recommendations.</p>
+                </div>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={emailNotifications}
+                  onClick={() => setEmailNotifications((current) => !current)}
+                  className={`profile-switch ${
+                    emailNotifications ? "active" : ""
+                  }`}
+                >
+                  <span />
+                </button>
+              </div>
+            </section>
           </div>
 
-          <div className="profile-form-grid">
-            <div className="profile-field">
-              <label htmlFor="name">Full Name</label>
-
-              <input
-                id="name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleChange}
-                className="profile-input"
-                placeholder="Enter your full name"
-                required
-              />
-            </div>
-
-            <div className="profile-field">
-              <label htmlFor="email">Email Address</label>
-
-              <input
-                id="email"
-                type="email"
-                value={email}
-                className="profile-input"
-                disabled
-              />
-
-              <small>Email address cannot be changed here.</small>
-            </div>
-
-            <div className="profile-field">
-              <label htmlFor="phone">Phone Number</label>
-
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={handleChange}
-                className="profile-input"
-                placeholder="Enter your phone number"
-              />
-            </div>
-
-            <div className="profile-field">
-              <label htmlFor="job_title">Job Title</label>
-
-              <input
-                id="job_title"
-                name="job_title"
-                type="text"
-                value={formData.job_title}
-                onChange={handleChange}
-                className="profile-input"
-                placeholder="e.g. Product Manager"
-              />
-            </div>
-
-            <div className="profile-field">
-              <label htmlFor="location">Location</label>
-
-              <input
-                id="location"
-                name="location"
-                type="text"
-                value={formData.location}
-                onChange={handleChange}
-                className="profile-input"
-                placeholder="e.g. Bandung, Indonesia"
-              />
-            </div>
-          </div>
-
-          <div className="profile-field profile-bio-field">
-            <label htmlFor="bio">Bio</label>
-
-            <textarea
-              id="bio"
-              name="bio"
-              value={formData.bio}
-              onChange={handleChange}
-              className="profile-textarea"
-              placeholder="Tell us a little about yourself..."
-              rows={5}
-              maxLength={1000}
-            />
-
-            <small>{formData.bio.length}/1000 characters</small>
-          </div>
-
-          {/* ==================================================
-              SAVE STATUS
-          ================================================== */}
-
+          {/* STATUS */}
           {saveStatus && (
-            <div className="profile-success">
+            <div className="profile-status success">
               <Icon name="check" />
               <span>{saveStatus}</span>
             </div>
           )}
 
           {errorMessage && (
-            <div className="profile-error">
+            <div className="profile-status error">
               <Icon name="alert-circle" />
               <span>{errorMessage}</span>
             </div>
           )}
 
-          <div className="profile-actions">
-            <button
-              type="submit"
-              className="profile-save-button"
-              disabled={saving}
-            >
-              {saving ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Icon name="check" />
-                  Save Changes
-                </>
-              )}
-            </button>
+          {/* SUMMARY */}
+          <div className="profile-bottom-grid">
+            <section className="profile-card">
+              <div className="profile-section-header">
+                <h2>Account Summary</h2>
+              </div>
+
+              <div className="profile-summary-grid">
+                <div>
+                  <span>Member Since</span>
+                  <strong>{memberSince}</strong>
+                </div>
+
+                <div>
+                  <span>Total Comparisons</span>
+                  <strong>{comparisons}</strong>
+                </div>
+
+                <div>
+                  <span>Recommendations</span>
+                  <strong>{recommendations}</strong>
+                </div>
+
+                <div>
+                  <span>Reviews Written</span>
+                  <strong>{reviews}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section className="profile-card">
+              <h2 className="profile-card-title">Quick Actions</h2>
+
+              <div className="profile-action-list">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("security")}
+                  className="profile-action-button"
+                >
+                  <Icon name="lock" />
+                  Change Password
+                </button>
+
+                <button type="button" className="profile-action-button">
+                  <Icon name="download" />
+                  Download My Data
+                </button>
+
+                <button type="button" className="profile-action-button danger">
+                  <Icon name="trash" />
+                  Delete Account
+                </button>
+              </div>
+            </section>
           </div>
         </form>
       )}
 
-      {/* ======================================================
-          BUSINESS INFORMATION
-      ====================================================== */}
-
+      {/* BUSINESS */}
       {activeTab === "business" && (
-        <form className="profile-section" onSubmit={handleSaveProfile}>
+        <form onSubmit={handleSaveProfile} className="profile-card">
           <div className="profile-section-header">
-            <div>
-              <h2>Business Information</h2>
+            <h2>Business Profile</h2>
 
-              <p>
-                Tell us about your company so we can provide more relevant
-                recommendations.
-              </p>
-            </div>
+            <p>
+              Tell us about your company so we can provide more relevant
+              recommendations.
+            </p>
           </div>
 
-          <div className="profile-form-grid">
+          <div className="profile-business-grid">
             <div className="profile-field">
               <label htmlFor="company">Company</label>
 
               <input
                 id="company"
                 name="company"
-                type="text"
                 value={formData.company}
                 onChange={handleChange}
-                className="profile-input"
                 placeholder="Enter company name"
               />
             </div>
@@ -524,7 +621,6 @@ function Profile() {
                 name="business_size"
                 value={formData.business_size}
                 onChange={handleChange}
-                className="profile-input"
               >
                 <option value="">Select business size</option>
                 <option value="Micro">Micro</option>
@@ -541,10 +637,8 @@ function Profile() {
               <input
                 id="industry"
                 name="industry"
-                type="text"
                 value={formData.industry}
                 onChange={handleChange}
-                className="profile-input"
                 placeholder="e.g. Technology"
               />
             </div>
@@ -555,151 +649,107 @@ function Profile() {
               <input
                 id="business_need"
                 name="business_need"
-                type="text"
                 value={formData.business_need}
                 onChange={handleChange}
-                className="profile-input"
                 placeholder="e.g. CRM, Accounting, HR"
               />
             </div>
           </div>
 
-          {saveStatus && (
-            <div className="profile-success">
-              <Icon name="check" />
-              <span>{saveStatus}</span>
-            </div>
-          )}
-
-          {errorMessage && (
-            <div className="profile-error">
-              <Icon name="alert-circle" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
-
-          <div className="profile-actions">
+          <div className="profile-form-action">
             <button
               type="submit"
-              className="profile-save-button"
               disabled={saving}
+              className="profile-primary-button"
             >
-              {saving ? (
-                "Saving..."
-              ) : (
-                <>
-                  <Icon name="check" />
-                  Save Changes
-                </>
-              )}
+              <Icon name="check" />
+              {saving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>
       )}
 
-      {/* ======================================================
-          PREFERENCES
-      ====================================================== */}
-
+      {/* PREFERENCES */}
       {activeTab === "preferences" && (
-        <section className="profile-section">
+        <section className="profile-card">
           <div className="profile-section-header">
-            <div>
-              <h2>Preferences</h2>
+            <h2>Preferences</h2>
 
-              <p>Customize your Software Empire experience.</p>
-            </div>
+            <p>Customize your Software Empire experience.</p>
           </div>
 
           <div className="profile-preferences">
-            <div className="profile-preference-item">
-              <div>
-                <h3>Software Recommendations</h3>
+            {[
+              {
+                title: "Software Recommendations",
+                description:
+                  "Receive personalized software recommendations based on your profile.",
+              },
+              {
+                title: "Product Updates",
+                description:
+                  "Receive updates about new software and platform features.",
+              },
+              {
+                title: "Newsletter",
+                description:
+                  "Receive Software Empire insights and industry updates.",
+              },
+            ].map((item) => (
+              <div key={item.title} className="profile-preference-item">
+                <div>
+                  <h3>{item.title}</h3>
 
-                <p>
-                  Receive personalized software recommendations based on your
-                  profile.
-                </p>
+                  <p>{item.description}</p>
+                </div>
+
+                <button type="button" className="profile-switch active">
+                  <span />
+                </button>
               </div>
-
-              <label className="profile-switch">
-                <input type="checkbox" defaultChecked />
-                <span />
-              </label>
-            </div>
-
-            <div className="profile-preference-item">
-              <div>
-                <h3>Product Updates</h3>
-
-                <p>Receive updates about new software and platform features.</p>
-              </div>
-
-              <label className="profile-switch">
-                <input type="checkbox" defaultChecked />
-                <span />
-              </label>
-            </div>
-
-            <div className="profile-preference-item">
-              <div>
-                <h3>Newsletter</h3>
-
-                <p>Receive Software Empire insights and industry updates.</p>
-              </div>
-
-              <label className="profile-switch">
-                <input type="checkbox" defaultChecked />
-                <span />
-              </label>
-            </div>
+            ))}
           </div>
         </section>
       )}
 
-      {/* ======================================================
-          SECURITY
-      ====================================================== */}
-
+      {/* SECURITY */}
       {activeTab === "security" && (
-        <section className="profile-section">
+        <section className="profile-card">
           <div className="profile-section-header">
-            <div>
-              <h2>Security</h2>
+            <h2>Account Security</h2>
 
-              <p>Manage your account security and password.</p>
-            </div>
+            <p>Manage your account security and password.</p>
           </div>
 
-          <div className="profile-security-list">
+          <div className="profile-security">
             <div className="profile-security-item">
-              <div className="profile-security-icon">
+              <div className="profile-security-icon blue">
                 <Icon name="lock" />
               </div>
 
-              <div>
+              <div className="profile-security-content">
                 <h3>Password</h3>
 
                 <p>Your password is securely encrypted.</p>
               </div>
 
-              <button type="button" className="profile-secondary-button">
+              <button type="button" className="profile-outline-button">
                 Change Password
               </button>
             </div>
 
             <div className="profile-security-item">
-              <div className="profile-security-icon">
+              <div className="profile-security-icon green">
                 <Icon name="shield" />
               </div>
 
-              <div>
+              <div className="profile-security-content">
                 <h3>Account Protection</h3>
 
                 <p>Your account is protected by authentication.</p>
               </div>
 
-              <span className="profile-security-status">Protected</span>
+              <span className="profile-protected">Protected</span>
             </div>
           </div>
         </section>

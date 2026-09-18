@@ -24,6 +24,10 @@ import Button from "../../components/common/Button";
 function RecommendationResult({ answers = {}, result = {}, onRetake }) {
   const navigate = useNavigate();
 
+  /* =========================================================
+     RECOMMENDATIONS
+  ========================================================= */
+
   const recommendations =
     result?.recommendations ||
     result?.data?.recommendations ||
@@ -36,6 +40,10 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
 
   const topRecommendations = safeRecommendations.slice(0, 3);
   const otherRecommendations = safeRecommendations.slice(3);
+
+  /* =========================================================
+     SUMMARY DATA
+  ========================================================= */
 
   const summaryItems = useMemo(
     () => [
@@ -73,28 +81,55 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
     [answers],
   );
 
+  /* =========================================================
+     HELPERS
+  ========================================================= */
+
   const getScore = (item) => {
     const raw =
       item?.match_score ?? item?.matchScore ?? item?.score ?? item?.fit ?? 0;
 
     if (typeof raw === "string" && raw.includes("%")) {
-      return Math.round(parseFloat(raw));
+      const parsed = parseFloat(raw);
+
+      return Number.isFinite(parsed) ? Math.round(parsed) : 0;
     }
 
     const number = Number(raw);
+
+    if (!Number.isFinite(number)) {
+      return 0;
+    }
 
     if (number > 0 && number <= 1) {
       return Math.round(number * 100);
     }
 
-    return Math.round(number || 0);
+    return Math.max(0, Math.min(100, Math.round(number)));
   };
 
-  const getRating = (item) =>
-    item?.rating ?? item?.average_rating ?? item?.review_rating ?? "4.6";
+  const getRating = (item) => {
+    const raw =
+      item?.rating ?? item?.average_rating ?? item?.review_rating ?? 4.6;
 
-  const getReviews = (item) =>
-    item?.reviews_count ?? item?.review_count ?? item?.reviews ?? "2,456";
+    const rating = Number(raw);
+
+    return Number.isFinite(rating) ? rating.toFixed(1) : "4.6";
+  };
+
+  const getReviews = (item) => {
+    const raw =
+      item?.reviews_count ?? item?.review_count ?? item?.reviews ?? 2456;
+
+    if (typeof raw === "number") {
+      return raw;
+    }
+
+    const cleaned = String(raw).replace(/,/g, "");
+    const number = Number(cleaned);
+
+    return Number.isFinite(number) ? number : 2456;
+  };
 
   const getDescription = (item) =>
     item?.description ||
@@ -103,7 +138,9 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
   const getFeatures = (item) => {
     if (Array.isArray(item?.features)) {
       return item.features.slice(0, 5).map((feature) => {
-        if (typeof feature === "string") return feature;
+        if (typeof feature === "string") {
+          return feature;
+        }
 
         return (
           feature?.name ||
@@ -115,7 +152,13 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
     }
 
     if (Array.isArray(item?.tags)) {
-      return item.tags.slice(0, 5);
+      return item.tags.slice(0, 5).map((tag) => {
+        if (typeof tag === "string") {
+          return tag;
+        }
+
+        return tag?.name || tag?.title || "Business feature";
+      });
     }
 
     return [
@@ -128,21 +171,23 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
 
   const getTags = (item) => {
     if (Array.isArray(item?.tags)) {
-      return item.tags
-        .slice(0, 3)
-        .map((tag) =>
-          typeof tag === "string" ? tag : tag?.name || tag?.title || "Feature",
-        );
+      return item.tags.slice(0, 3).map((tag) => {
+        if (typeof tag === "string") {
+          return tag;
+        }
+
+        return tag?.name || tag?.title || "Feature";
+      });
     }
 
     if (Array.isArray(item?.categories)) {
-      return item.categories
-        .slice(0, 3)
-        .map((category) =>
-          typeof category === "string"
-            ? category
-            : category?.name || category?.title || "Category",
-        );
+      return item.categories.slice(0, 3).map((category) => {
+        if (typeof category === "string") {
+          return category;
+        }
+
+        return category?.name || category?.title || "Category";
+      });
     }
 
     return ["CRM", "Sales Automation", "Marketing Automation"];
@@ -160,23 +205,82 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
   };
 
   const getMatchLabel = (score) => {
-    if (score >= 90) return "Excellent Match";
-    if (score >= 80) return "Great Match";
-    if (score >= 70) return "Good Match";
+    if (score >= 90) {
+      return "Excellent Match";
+    }
+
+    if (score >= 80) {
+      return "Great Match";
+    }
+
+    if (score >= 70) {
+      return "Good Match";
+    }
+
     return "Potential Match";
   };
 
+  /* =========================================================
+     HANDLERS
+  ========================================================= */
+
   const handleDetails = (item) => {
-    if (!item?.slug) return;
+    if (!item?.slug) {
+      return;
+    }
 
     navigate(`/software/${item.slug}`);
   };
 
   const handleCompare = (item) => {
-    if (!item?.slug) return;
+    if (!item?.slug) {
+      return;
+    }
 
     navigate(`/compare?software=${item.slug}`);
   };
+
+  const handleVisitWebsite = (item) => {
+    const website = item?.website || item?.url;
+
+    if (!website || website === "#") {
+      return;
+    }
+
+    window.open(website, "_blank", "noopener,noreferrer");
+  };
+
+  const handleCompareAll = () => {
+    const slugs = topRecommendations.map((item) => item?.slug).filter(Boolean);
+
+    if (!slugs.length) {
+      navigate("/compare");
+      return;
+    }
+
+    navigate(`/compare?software=${slugs.join(",")}`);
+  };
+
+  const handleImplementation = () => {
+    navigate("/implementation");
+  };
+
+  /* =========================================================
+     PROGRESS STEPS
+  ========================================================= */
+
+  const progressSteps = [
+    "Business Type",
+    "Business Size",
+    "Industry",
+    "Key Needs",
+    "Must-have Features",
+    "Budget",
+    "Team Size",
+    "Integrations",
+    "Summary",
+    "Results",
+  ];
 
   return (
     <PublicLayout>
@@ -184,6 +288,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
         {/* =====================================================
             HEADER
         ====================================================== */}
+
         <section className="recommendation-header">
           <div>
             <span className="recommendation-eyebrow">
@@ -211,23 +316,24 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
         {/* =====================================================
             PROGRESS
         ====================================================== */}
-        <section className="recommendation-progress">
+
+        <section
+          className="recommendation-progress"
+          aria-label="Recommendation progress"
+        >
           <div className="progress-line" />
 
-          {[
-            "Business Type",
-            "Business Size",
-            "Industry",
-            "Key Needs",
-            "Must-have Features",
-            "Budget",
-            "Team Size",
-            "Integrations",
-            "Summary",
-            "Results",
-          ].map((step, index) => {
-            const active = index === 9;
-            const completed = index < 3;
+          {progressSteps.map((step, index) => {
+            const isLastStep = index === progressSteps.length - 1;
+
+            /*
+             * Result page = step 10.
+             *
+             * Step 1 - 9 = completed
+             * Step 10 = active
+             */
+            const active = isLastStep;
+            const completed = index < progressSteps.length - 1;
 
             return (
               <div
@@ -253,6 +359,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
         {/* =====================================================
             RESULT SUMMARY
         ====================================================== */}
+
         <section className="result-summary">
           <div className="summary-illustration">
             <div className="summary-trophy">
@@ -275,6 +382,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
 
                   <div>
                     <span>{item.label}</span>
+
                     <strong>{item.value}</strong>
                   </div>
                 </div>
@@ -291,6 +399,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
         {/* =====================================================
             NO RESULT
         ====================================================== */}
+
         {!safeRecommendations.length && (
           <section className="recommendation-empty">
             <div className="empty-icon">
@@ -309,13 +418,15 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
         )}
 
         {/* =====================================================
-            TOP 3
+            TOP 3 RECOMMENDATIONS
         ====================================================== */}
+
         {topRecommendations.length > 0 && (
           <section className="top-recommendations">
             <div className="section-title-row">
               <div>
                 <span className="section-eyebrow">TOP PICKS</span>
+
                 <h2>Top 3 Recommended Software</h2>
               </div>
 
@@ -334,28 +445,37 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                 return (
                   <article
                     className="recommendation-card"
-                    key={item.id || item.slug || index}
+                    key={item?.id || item?.slug || index}
                   >
-                    {/* Ranking */}
+                    {/* =================================================
+                        RANKING
+                    ================================================== */}
+
                     <div className={`ranking-badge rank-${index + 1}`}>
                       {index + 1}
                     </div>
 
-                    {/* Product */}
+                    {/* =================================================
+                        PRODUCT
+                    ================================================== */}
+
                     <div className="recommendation-product">
                       <div className="software-logo-large">
                         {logo ? (
-                          <img src={logo} alt={item.name || "Software logo"} />
+                          <img
+                            src={logo}
+                            alt={`${item?.name || "Software"} logo`}
+                          />
                         ) : (
                           <span>
-                            {item.name?.slice(0, 2).toUpperCase() || "SW"}
+                            {item?.name?.slice(0, 2).toUpperCase() || "SW"}
                           </span>
                         )}
                       </div>
 
                       <div className="product-info">
                         <div className="product-name-row">
-                          <h3>{item.name || "Software"}</h3>
+                          <h3>{item?.name || "Software"}</h3>
 
                           {index === 0 && (
                             <span className="best-match-badge">
@@ -365,43 +485,39 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                           )}
                         </div>
 
+                        {/* =================================================
+                            RATING
+                        ================================================== */}
+
                         <div className="rating-row">
-                          <span className="stars" aria-label="5 stars">
-                            <Star
-                              size={16}
-                              fill="currentColor"
-                              strokeWidth={1.5}
-                            />
-                            <Star
-                              size={16}
-                              fill="currentColor"
-                              strokeWidth={1.5}
-                            />
-                            <Star
-                              size={16}
-                              fill="currentColor"
-                              strokeWidth={1.5}
-                            />
-                            <Star
-                              size={16}
-                              fill="currentColor"
-                              strokeWidth={1.5}
-                            />
-                            <Star
-                              size={16}
-                              fill="currentColor"
-                              strokeWidth={1.5}
-                            />
+                          <span
+                            className="stars"
+                            aria-label={`${getRating(item)} out of 5 stars`}
+                          >
+                            {Array.from({ length: 5 }, (_, starIndex) => (
+                              <Star
+                                key={starIndex}
+                                size={16}
+                                fill="currentColor"
+                                strokeWidth={1.5}
+                              />
+                            ))}
                           </span>
 
                           <strong>{getRating(item)}</strong>
 
-                          <span>
-                            ({Number(getReviews(item)).toLocaleString()})
-                          </span>
+                          <span>({getReviews(item).toLocaleString()})</span>
                         </div>
 
+                        {/* =================================================
+                            DESCRIPTION
+                        ================================================== */}
+
                         <p>{getDescription(item)}</p>
+
+                        {/* =================================================
+                            TAGS
+                        ================================================== */}
 
                         <div className="software-tags">
                           {tags.map((tag, tagIndex) => (
@@ -413,7 +529,10 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                       </div>
                     </div>
 
-                    {/* Match Score */}
+                    {/* =================================================
+                        MATCH SCORE
+                    ================================================== */}
+
                     <div className="match-score">
                       <span className="match-title">Match Score</span>
 
@@ -422,6 +541,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                         style={{
                           "--score": `${score * 3.6}deg`,
                         }}
+                        aria-label={`Match score ${score}%`}
                       >
                         <div className="score-gauge-inner">
                           <strong>{score}%</strong>
@@ -433,7 +553,10 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                       </span>
                     </div>
 
-                    {/* Why Match */}
+                    {/* =================================================
+                        WHY MATCH
+                    ================================================== */}
+
                     <div className="why-match">
                       <h4>Why it's a great match</h4>
 
@@ -450,7 +573,10 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                       </ul>
                     </div>
 
-                    {/* Actions */}
+                    {/* =================================================
+                        ACTIONS
+                    ================================================== */}
+
                     <div className="recommendation-actions">
                       <button
                         type="button"
@@ -473,13 +599,8 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                       <button
                         type="button"
                         className="secondary-action"
-                        onClick={() =>
-                          window.open(
-                            item.website || item.url || "#",
-                            "_blank",
-                            "noopener,noreferrer",
-                          )
-                        }
+                        onClick={() => handleVisitWebsite(item)}
+                        disabled={!(item?.website || item?.url)}
                       >
                         <ExternalLink size={16} strokeWidth={2} />
                         Visit Website
@@ -500,6 +621,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
         {/* =====================================================
             OTHER SOFTWARE
         ====================================================== */}
+
         {otherRecommendations.length > 0 && (
           <section className="other-software">
             <div className="other-header">
@@ -520,19 +642,26 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                   <button
                     type="button"
                     className="other-software-card"
-                    key={item.id || item.slug || index}
+                    key={item?.id || item?.slug || index}
                     onClick={() => handleDetails(item)}
                   >
+                    {/* Logo */}
+
                     <div className="other-logo">
                       {logo ? (
-                        <img src={logo} alt={item.name} />
+                        <img
+                          src={logo}
+                          alt={`${item?.name || "Software"} logo`}
+                        />
                       ) : (
-                        item.name?.slice(0, 1).toUpperCase()
+                        item?.name?.slice(0, 1).toUpperCase() || "S"
                       )}
                     </div>
 
+                    {/* Info */}
+
                     <div>
-                      <strong>{item.name}</strong>
+                      <strong>{item?.name || "Software"}</strong>
 
                       <div className="other-rating">
                         <Star
@@ -545,6 +674,8 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                         <span>{getRating(item)}</span>
                       </div>
                     </div>
+
+                    {/* Arrow */}
 
                     <span className="arrow">
                       <ArrowRight size={18} strokeWidth={2} />
@@ -559,6 +690,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
         {/* =====================================================
             HELP CTA
         ====================================================== */}
+
         <section className="recommendation-help">
           <div className="help-content">
             <span className="section-eyebrow">NEED HELP?</span>
@@ -570,7 +702,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
               solution for your business.
             </p>
 
-            <Button>
+            <Button onClick={handleImplementation}>
               Request Free Consultation
               <ArrowRight size={17} strokeWidth={2} />
             </Button>
@@ -584,7 +716,10 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
         {/* =====================================================
             BOTTOM ACTIONS
         ====================================================== */}
+
         <section className="result-bottom-actions">
+          {/* Compare */}
+
           <div className="bottom-action">
             <div className="bottom-icon">
               <GitCompare size={24} strokeWidth={1.8} />
@@ -598,21 +733,20 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
 
             <button
               type="button"
-              onClick={() =>
-                navigate(
-                  `/compare?software=${topRecommendations
-                    .map((item) => item.slug)
-                    .filter(Boolean)
-                    .join(",")}`,
-                )
-              }
+              onClick={handleCompareAll}
+              disabled={!topRecommendations.length}
             >
-              Compare Now ({topRecommendations.length})
+              Compare Now ({topRecommendations.length}
+              )
               <ArrowRight size={16} strokeWidth={2} />
             </button>
           </div>
 
+          {/* Divider */}
+
           <div className="bottom-divider">or</div>
+
+          {/* Implementation */}
 
           <div className="bottom-action">
             <div className="bottom-icon">
@@ -625,7 +759,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
               <p>Get matched with verified implementation partners.</p>
             </div>
 
-            <button type="button">
+            <button type="button" onClick={handleImplementation}>
               Get Implementation Help
               <ArrowRight size={16} strokeWidth={2} />
             </button>

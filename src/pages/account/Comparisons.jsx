@@ -7,9 +7,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 
-import AccountLayout from "../../layouts/AccountLayout";
 import Button from "../../components/common/Button";
-import EmptyState from "../../components/common/EmptyState";
 
 import { getComparisons } from "../../services/comparisonService";
 
@@ -32,15 +30,26 @@ export default function Comparisons() {
 
         if (cancelled) return;
 
-        const data = response?.data || response || [];
+        const data =
+          response?.data ||
+          response ||
+          [];
 
-        setComparisons(Array.isArray(data) ? data : []);
+        setComparisons(
+          Array.isArray(data)
+            ? data
+            : [],
+        );
       } catch (err) {
-        console.error("Failed to load comparisons:", err);
+        console.error(
+          "Failed to load comparisons:",
+          err,
+        );
 
         if (!cancelled) {
           setError(
-            err?.message || "Unable to load your software comparisons.",
+            err?.message ||
+              "Unable to load your software comparisons.",
           );
         }
       } finally {
@@ -58,81 +67,127 @@ export default function Comparisons() {
   }, []);
 
   return (
-    <AccountLayout>
-      <div className="page">
-        {/* HEADER */}
-        <div className="page-head">
-          <div>
-            <span className="eyebrow">MY ACCOUNT</span>
+    <div className="page">
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
 
-            <h1>Comparisons</h1>
+      <div className="page-head">
+        <div>
+          <span className="eyebrow">
+            MY ACCOUNT
+          </span>
 
-            <p>
-              Review the software comparisons you've created and continue
-              evaluating your options.
-            </p>
-          </div>
+          <h1>Comparisons</h1>
 
-          <Button onClick={() => navigate("/compare")}>
-            <Plus size={17} />
-            New comparison
-          </Button>
+          <p>
+            Review the software comparisons
+            you've created and continue
+            evaluating your options.
+          </p>
         </div>
 
-        {/* LOADING */}
-        {loading && (
-          <div className="saved-state-card">
-            <div className="saved-state-icon loading-icon">
-              <GitCompareArrows size={26} />
-            </div>
+        <Button
+          onClick={() =>
+            navigate("/compare")
+          }
+        >
+          <Plus size={17} />
+          New comparison
+        </Button>
+      </div>
 
-            <div className="saved-state-content">
-              <h3>Loading your comparisons</h3>
+      {/* =====================================================
+          LOADING
+      ====================================================== */}
 
-              <p>
-                We're getting your saved comparisons ready.
-              </p>
-            </div>
+      {loading && (
+        <div className="saved-state-card">
+          <div className="saved-state-icon loading-icon">
+            <GitCompareArrows size={26} />
           </div>
-        )}
 
-        {/* ERROR */}
-        {!loading && error && (
-          <div className="saved-state-card error-state">
-            <div className="saved-state-icon">!</div>
-
-            <div className="saved-state-content">
-              <span className="eyebrow">SOMETHING WENT WRONG</span>
-
-              <h3>Unable to load comparisons</h3>
-
-              <p>{error}</p>
-
-              <Button onClick={() => window.location.reload()}>
-                Try again
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* EMPTY */}
-        {!loading && !error && comparisons.length === 0 && (
-          <div className="saved-empty">
-            <div className="saved-empty-icon">
-              <GitCompareArrows size={30} strokeWidth={1.8} />
-            </div>
-
-            <span className="eyebrow">YOUR COMPARISONS</span>
-
-            <h2>No comparisons yet</h2>
+          <div className="saved-state-content">
+            <h3>
+              Loading your comparisons
+            </h3>
 
             <p>
-              Create a comparison by selecting two or three software products.
-              Your comparison history will appear here.
+              We're getting your saved
+              comparisons ready.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          ERROR
+      ====================================================== */}
+
+      {!loading && error && (
+        <div className="saved-state-card error-state">
+          <div className="saved-state-icon">
+            !
+          </div>
+
+          <div className="saved-state-content">
+            <span className="eyebrow">
+              SOMETHING WENT WRONG
+            </span>
+
+            <h3>
+              Unable to load comparisons
+            </h3>
+
+            <p>{error}</p>
+
+            <Button
+              onClick={() =>
+                window.location.reload()
+              }
+            >
+              Try again
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          EMPTY
+      ====================================================== */}
+
+      {!loading &&
+        !error &&
+        comparisons.length === 0 && (
+          <div className="saved-empty">
+            <div className="saved-empty-icon">
+              <GitCompareArrows
+                size={30}
+                strokeWidth={1.8}
+              />
+            </div>
+
+            <span className="eyebrow">
+              YOUR COMPARISONS
+            </span>
+
+            <h2>
+              No comparisons yet
+            </h2>
+
+            <p>
+              Create a comparison by selecting
+              two or three software products.
+              Your comparison history will
+              appear here.
             </p>
 
             <div className="saved-empty-actions">
-              <Button onClick={() => navigate("/compare")}>
+              <Button
+                onClick={() =>
+                  navigate("/compare")
+                }
+              >
                 Start comparing
                 <ArrowRight size={17} />
               </Button>
@@ -140,7 +195,11 @@ export default function Comparisons() {
               <button
                 type="button"
                 className="saved-text-link"
-                onClick={() => navigate("/software")}
+                onClick={() =>
+                  navigate(
+                    "/software-directory",
+                  )
+                }
               >
                 Browse software
                 <ArrowRight size={15} />
@@ -149,12 +208,19 @@ export default function Comparisons() {
           </div>
         )}
 
-        {/* COMPARISONS */}
-        {!loading && !error && comparisons.length > 0 && (
+      {/* =====================================================
+          COMPARISONS
+      ====================================================== */}
+
+      {!loading &&
+        !error &&
+        comparisons.length > 0 && (
           <>
             <div className="saved-summary">
               <div>
-                <span className="eyebrow">YOUR HISTORY</span>
+                <span className="eyebrow">
+                  YOUR HISTORY
+                </span>
 
                 <h2>
                   {comparisons.length}{" "}
@@ -166,92 +232,133 @@ export default function Comparisons() {
             </div>
 
             <div className="card-grid">
-              {comparisons.map((comparison) => {
-                const items =
-                  comparison.software ||
-                  comparison.items ||
-                  comparison.software_names ||
-                  [];
+              {comparisons.map(
+                (comparison) => {
+                  const items =
+                    comparison.software ||
+                    comparison.items ||
+                    comparison.software_names ||
+                    [];
 
-                return (
-                  <article
-                    className="content-card comparison-card"
-                    key={comparison.id}
-                  >
-                    <div className="comparison-card-icon">
-                      <GitCompareArrows size={20} />
-                    </div>
-
-                    <span className="eyebrow">COMPARISON</span>
-
-                    <h2>
-                      {comparison.name ||
-                        `Comparison #${comparison.id}`}
-                    </h2>
-
-                    <div className="comparison-meta">
-                      <CalendarDays size={15} />
-
-                      <span>
-                        {comparison.created_at
-                          ? new Date(
-                              comparison.created_at,
-                            ).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
-                          : "Recently created"}
-                      </span>
-                    </div>
-
-                    {items.length > 0 && (
-                      <div className="comparison-items">
-                        {items.slice(0, 3).map((item, index) => {
-                          const name =
-                            typeof item === "string"
-                              ? item
-                              : item.name;
-
-                          return (
-                            <div
-                              className="comparison-item"
-                              key={item.id || `${name}-${index}`}
-                            >
-                              <span>
-                                {(name || "Software")
-                                  .slice(0, 2)
-                                  .toUpperCase()}
-                              </span>
-
-                              <strong>
-                                {name || "Software"}
-                              </strong>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      className="text-btn"
-                      onClick={() =>
-                        navigate(
-                          `/compare?id=${comparison.id}`,
-                        )
-                      }
+                  return (
+                    <article
+                      className="content-card comparison-card"
+                      key={comparison.id}
                     >
-                      Open comparison
-                      <ArrowRight size={15} />
-                    </button>
-                  </article>
-                );
-              })}
+                      {/* CARD ICON */}
+
+                      <div className="comparison-card-icon">
+                        <GitCompareArrows
+                          size={20}
+                        />
+                      </div>
+
+                      <span className="eyebrow">
+                        COMPARISON
+                      </span>
+
+                      <h2>
+                        {comparison.name ||
+                          `Comparison #${comparison.id}`}
+                      </h2>
+
+                      {/* META */}
+
+                      <div className="comparison-meta">
+                        <CalendarDays
+                          size={15}
+                        />
+
+                        <span>
+                          {comparison.created_at
+                            ? new Date(
+                                comparison.created_at,
+                              ).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month:
+                                    "short",
+                                  day: "numeric",
+                                  year:
+                                    "numeric",
+                                },
+                              )
+                            : "Recently created"}
+                        </span>
+                      </div>
+
+                      {/* SOFTWARE ITEMS */}
+
+                      {items.length > 0 && (
+                        <div className="comparison-items">
+                          {items
+                            .slice(0, 3)
+                            .map(
+                              (
+                                item,
+                                index,
+                              ) => {
+                                const name =
+                                  typeof item ===
+                                  "string"
+                                    ? item
+                                    : item.name;
+
+                                return (
+                                  <div
+                                    className="comparison-item"
+                                    key={
+                                      item.id ||
+                                      `${name}-${index}`
+                                    }
+                                  >
+                                    <span>
+                                      {(
+                                        name ||
+                                        "Software"
+                                      )
+                                        .slice(
+                                          0,
+                                          2,
+                                        )
+                                        .toUpperCase()}
+                                    </span>
+
+                                    <strong>
+                                      {name ||
+                                        "Software"}
+                                    </strong>
+                                  </div>
+                                );
+                              },
+                            )}
+                        </div>
+                      )}
+
+                      {/* ACTION */}
+
+                      <button
+                        type="button"
+                        className="text-btn"
+                        onClick={() =>
+                          navigate(
+                            `/compare?id=${comparison.id}`,
+                          )
+                        }
+                      >
+                        Open comparison
+
+                        <ArrowRight
+                          size={15}
+                        />
+                      </button>
+                    </article>
+                  );
+                },
+              )}
             </div>
           </>
         )}
-      </div>
-    </AccountLayout>
+    </div>
   );
 }

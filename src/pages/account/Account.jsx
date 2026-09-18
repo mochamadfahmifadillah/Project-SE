@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import AccountLayout from "../../layouts/AccountLayout";
 import Button from "../../components/common/Button";
 import Icon from "../../components/common/Icon";
 
@@ -50,16 +49,8 @@ function Account() {
 
         setComparisons(Array.isArray(comparisonData) ? comparisonData : []);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Implementation Requests
-        |--------------------------------------------------------------------------
-        |
-        | Untuk sementara data implementation belum diambil
-        | karena endpoint GET belum tersedia.
-        |
-        */
-
+        // Endpoint implementation request
+        // belum tersedia untuk GET.
         setImplementations([]);
       } catch (err) {
         console.error("Failed to load account:", err);
@@ -86,7 +77,11 @@ function Account() {
   const displayName = user?.name || "there";
 
   return (
-    <AccountLayout>
+    <div className="account-page">
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
+
       <div className="account-header">
         <div>
           <span className="eyebrow">MY ACCOUNT</span>
@@ -98,10 +93,15 @@ function Account() {
           </p>
         </div>
 
-        <Button onClick={() => navigate("/recommend")}>Find Software</Button>
+        <Button onClick={() => navigate("/recommendation")}>
+          Find Software
+        </Button>
       </div>
 
-      {/* ERROR */}
+      {/* ======================================================
+          ERROR
+      ====================================================== */}
+
       {error && (
         <div className="auth-error" role="alert">
           <strong>Unable to load account</strong>
@@ -110,9 +110,13 @@ function Account() {
         </div>
       )}
 
-      {/* STATS */}
+      {/* ======================================================
+          STATS
+      ====================================================== */}
+
       <div className="account-grid">
         {/* SAVED SOFTWARE */}
+
         <div className="content-card">
           <span className="eyebrow">SAVED SOFTWARE</span>
 
@@ -122,6 +126,7 @@ function Account() {
         </div>
 
         {/* COMPARISONS */}
+
         <div className="content-card">
           <span className="eyebrow">COMPARISONS</span>
 
@@ -131,6 +136,7 @@ function Account() {
         </div>
 
         {/* IMPLEMENTATIONS */}
+
         <div className="content-card">
           <span className="eyebrow">IMPLEMENTATIONS</span>
 
@@ -140,7 +146,10 @@ function Account() {
         </div>
       </div>
 
-      {/* SAVED SOFTWARE */}
+      {/* ======================================================
+          SAVED SOFTWARE
+      ====================================================== */}
+
       <div className="content-card">
         <div className="section-head">
           <div>
@@ -154,7 +163,10 @@ function Account() {
           )}
         </div>
 
-        {/* LOADING */}
+        {/* ====================================================
+            LOADING
+        ==================================================== */}
+
         {loading && (
           <div className="empty">
             <h3>Loading your shortlist...</h3>
@@ -163,27 +175,37 @@ function Account() {
           </div>
         )}
 
-        {/* EMPTY */}
-        {!loading && !savedSoftware.length && (
+        {/* ====================================================
+            EMPTY
+        ==================================================== */}
+
+        {!loading && savedSoftware.length === 0 && (
           <div className="empty">
             <h3>Your shortlist is empty</h3>
 
             <p>Save software you are interested in and it will appear here.</p>
 
-            <Button onClick={() => navigate("/software")}>
+            <Button onClick={() => navigate("/software-directory")}>
               Explore Software
             </Button>
           </div>
         )}
 
-        {/* LIST */}
+        {/* ====================================================
+            LIST
+        ==================================================== */}
+
         {!loading && savedSoftware.length > 0 && (
           <div className="list">
             {savedSoftware.map((item) => (
               <div className="list-row" key={item.id}>
+                {/* SOFTWARE LOGO */}
+
                 <div className="software-logo">
                   {(item.name || "SW").slice(0, 2).toUpperCase()}
                 </div>
+
+                {/* SOFTWARE INFO */}
 
                 <div>
                   <b>{item.name}</b>
@@ -194,6 +216,8 @@ function Account() {
                     {item.rating ? ` · ${item.rating} ★` : ""}
                   </span>
                 </div>
+
+                {/* VIEW */}
 
                 <button
                   type="button"
@@ -208,7 +232,7 @@ function Account() {
           </div>
         )}
       </div>
-    </AccountLayout>
+    </div>
   );
 }
 

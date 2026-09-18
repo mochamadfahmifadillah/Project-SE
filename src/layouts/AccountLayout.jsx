@@ -66,35 +66,26 @@ function AccountLayout({ children }) {
             <h2>My Account</h2>
           </div>
 
-          <nav
-            className="account-nav"
-            aria-label="Account navigation"
-          >
+          <nav className="account-nav" aria-label="Account navigation">
             {menuItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 end={item.end}
                 className={({ isActive }) =>
-                  isActive
-                    ? "account-nav-item active"
-                    : "account-nav-item"
+                  isActive ? "account-nav-item active" : "account-nav-item"
                 }
               >
                 <span className="account-nav-icon">
                   <Icon name={item.icon} />
                 </span>
 
-                <span className="account-nav-label">
-                  {item.label}
-                </span>
+                <span className="account-nav-label">{item.label}</span>
               </NavLink>
             ))}
           </nav>
 
-          {/* =====================================================
-              RECOMMENDATION CARD
-          ====================================================== */}
+          {/* Recommendation Card */}
           <div className="account-recommendation">
             <div className="account-recommendation-icon">
               <Icon name="crown" />
@@ -102,10 +93,7 @@ function AccountLayout({ children }) {
 
             <h3>Get Better Recommendations</h3>
 
-            <p>
-              Complete your profile to get more accurate
-              software matches.
-            </p>
+            <p>Complete your profile to get more accurate software matches.</p>
 
             <NavLink
               to="/account/profile"
@@ -133,9 +121,7 @@ function AccountLayout({ children }) {
         {/* =====================================================
             CONTENT
         ====================================================== */}
-        <main className="account-content">
-          {children}
-        </main>
+        <main className="account-content">{children}</main>
       </div>
     </div>
   );
