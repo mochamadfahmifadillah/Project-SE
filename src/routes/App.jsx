@@ -28,6 +28,7 @@ import SavedSoftware from "../pages/account/SavedSoftware";
 import Comparisons from "../pages/account/Comparisons";
 import ImplementationRequests from "../pages/account/ImplementationRequests";
 import Settings from "../pages/account/Settings";
+import AccountLayout from "../layouts/AccountLayout";
 
 // ============================================================
 // ADMIN
@@ -155,6 +156,14 @@ function AccountGuard({ children }) {
 }
 
 // ============================================================
+// ACCOUNT PAGE WRAPPER
+// ============================================================
+
+function AccountPage({ children }) {
+  return <AccountLayout>{children}</AccountLayout>;
+}
+
+// ============================================================
 // APP
 // ============================================================
 
@@ -204,7 +213,9 @@ function App() {
           path="/account"
           element={
             <AccountGuard>
-              <Account />
+              <AccountPage>
+                <Account />
+              </AccountPage>
             </AccountGuard>
           }
         />
@@ -214,7 +225,9 @@ function App() {
           path="/account/profile"
           element={
             <AccountGuard>
-              <Profile />
+              <AccountPage>
+                <Profile />
+              </AccountPage>
             </AccountGuard>
           }
         />
@@ -224,7 +237,9 @@ function App() {
           path="/account/saved"
           element={
             <AccountGuard>
-              <SavedSoftware />
+              <AccountPage>
+                <SavedSoftware />
+              </AccountPage>
             </AccountGuard>
           }
         />
@@ -234,7 +249,9 @@ function App() {
           path="/account/comparisons"
           element={
             <AccountGuard>
-              <Comparisons />
+              <AccountPage>
+                <Comparisons />
+              </AccountPage>
             </AccountGuard>
           }
         />
@@ -244,7 +261,9 @@ function App() {
           path="/account/implementations"
           element={
             <AccountGuard>
-              <ImplementationRequests />
+              <AccountPage>
+                <ImplementationRequests />
+              </AccountPage>
             </AccountGuard>
           }
         />
@@ -254,7 +273,9 @@ function App() {
           path="/account/settings"
           element={
             <AccountGuard>
-              <Settings />
+              <AccountPage>
+                <Settings />
+              </AccountPage>
             </AccountGuard>
           }
         />
@@ -467,19 +488,11 @@ function App() {
             LEGACY REDIRECTS
         ====================================================== */}
 
-        <Route
-          path="/dashboard"
-          element={<Navigate to="/admin" replace />}
-        />
+        <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
 
         <Route
           path="/admin/implementation"
-          element={
-            <Navigate
-              to="/admin/implementation-leads"
-              replace
-            />
-          }
+          element={<Navigate to="/admin/implementation-leads" replace />}
         />
 
         {/* ======================================================
@@ -500,9 +513,7 @@ function App() {
               <div style={{ textAlign: "center" }}>
                 <h1>Route Not Found</h1>
 
-                <p>
-                  Current URL: {window.location.pathname}
-                </p>
+                <p>Current URL: {window.location.pathname}</p>
 
                 <a href="/">Back to Home</a>
               </div>

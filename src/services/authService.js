@@ -22,9 +22,20 @@ export async function loginUser(payload) {
 
 /**
  * GET /me
+ *
+ * Get currently authenticated user.
  */
 export async function getMe() {
   return api.get("/me");
+}
+
+/**
+ * PATCH /me
+ *
+ * Update currently authenticated user's profile.
+ */
+export async function updateProfile(payload) {
+  return api.patch("/me", payload);
 }
 
 /**
@@ -38,5 +49,6 @@ export default {
   registerUser,
   loginUser,
   getMe,
+  updateProfile,
   logoutUser,
 };

@@ -1,320 +1,711 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import Icon from "../../components/common/Icon";
 import { useAuthContext } from "../../context/AuthContext";
-export default function Profile() {
-  const { getMe } = useAuthContext();
 
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+function Profile() {
+  const {
+    user: authUser,
+    loading: authLoading,
+    updateProfile,
+  } = useAuthContext();
+
+  const [activeTab, setActiveTab] = useState("personal");
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    job_title: "",
+    location: "",
+    company: "",
+    business_size: "",
+    industry: "",
+    business_need: "",
+    bio: "",
+  });
+
+  /*
+  |--------------------------------------------------------------------------
+  | Sync authenticated user -> profile form
+  |--------------------------------------------------------------------------
+  */
 
   useEffect(() => {
-    let mounted = true;
+    if (!authUser) return;
 
-    const loadProfile = async () => {
-      try {
-        setLoading(true);
+    setFormData({
+      name: authUser.name || "",
+      phone: authUser.phone || "",
+      job_title: authUser.job_title || "",
+      location: authUser.location || "",
+      company: authUser.company || "",
+      business_size: authUser.business_size || "",
+      industry: authUser.industry || "",
+      business_need: authUser.business_need || "",
+      bio: authUser.bio || "",
+    });
+  }, [authUser]);
 
-        const response = await getMe();
+  /*
+  |--------------------------------------------------------------------------
+  | Loading authentication
+  |--------------------------------------------------------------------------
+  */
 
-        if (mounted) {
-          setUser(response?.data ?? response ?? null);
-        }
-      } catch (error) {
-        console.error("Failed to load profile:", error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadProfile();
-
-    return () => {
-      mounted = false;
-    };
-  }, [getMe]);
-
-  const fullName = user?.name || "—";
-  const email = user?.email || "—";
-  const company = user?.company || user?.company_name || "—";
-
-  if (loading) {
+  if (authLoading) {
     return (
-      <div className="account-page">
-        <div className="account-page-header">
-          <div>
-            <p className="account-eyebrow">ACCOUNT</p>
-            <h1>Profile</h1>
-            <p>Manage your personal and business information.</p>
-          </div>
-        </div>
-
-        <div className="account-loading">
-          Loading profile...
+      <div className="profile-page">
+        <div className="account-state">
+          <h2>Checking authentication...</h2>
+          <p>Please wait.</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="account-page">
-      {/* Header */}
-      <div className="account-page-header">
-        <div>
-          <p className="account-eyebrow">ACCOUNT</p>
+  /*
+  |--------------------------------------------------------------------------
+  | User not found
+  |--------------------------------------------------------------------------
+  */
 
-          <h1>Profile</h1>
-
-          <p>
-            Manage your personal information, business profile,
-            preferences, and account security.
-          </p>
+  if (!authUser) {
+    return (
+      <div className="profile-page">
+        <div className="account-state">
+          <h2>Profile unavailable</h2>
+          <p>We could not load the authenticated user profile.</p>
         </div>
       </div>
+    );
+  }
 
-      {/* Profile Hero */}
-      <section className="profile-hero">
-        <div className="profile-avatar">
-          {fullName.charAt(0).toUpperCase()}
-        </div>
+  /*
+  |--------------------------------------------------------------------------
+  | Helpers
+  |--------------------------------------------------------------------------
+  */
 
-        <div className="profile-hero-info">
-          <h2>{fullName}</h2>
+  const fullName = authUser.name || "—";
+  const email = authUser.email || "—";
 
-          <p>{email}</p>
+  const avatar =
+    authUser.avatar ||
+    authUser.avatar_url ||
+    authUser.profile_picture ||
+    authUser.profilePicture ||
+    null;
 
-          {company !== "—" && (
-            <span className="profile-company">
-              {company}
-            </span>
-          )}
+  const initials = useMemo(() => {
+    if (!fullName || fullName === "—") return "U";
+
+    return fullName
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((word) => word.charAt(0))
+      .join("")
+      .toUpperCase();
+  }, [fullName]);
+
+  const memberSince = authUser.created_at
+    ? new Date(authUser.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "—";
+
+  const profileFields = [
+    formData.name,
+    formData.phone,
+    formData.job_title,
+    formData.location,
+    formData.company,
+    formData.business_size,
+    formData.industry,
+    formData.business_need,
+    formData.bio,
+  ];
+
+  const completedFields = profileFields.filter(
+    (value) => value && String(value).trim() !== "",
+  ).length;
+
+  const profileCompleteness = Math.round(
+    (completedFields / profileFields.length) * 100,
+  );
+
+  /*
+  |--------------------------------------------------------------------------
+  | Change handler
+  |--------------------------------------------------------------------------
+  */
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }));
+
+    setSaveStatus("");
+    setErrorMessage("");
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Save profile
+  |--------------------------------------------------------------------------
+  */
+
+  const handleSaveProfile = async (event) => {
+    event.preventDefault();
+
+    try {
+      setSaving(true);
+      setSaveStatus("");
+      setErrorMessage("");
+
+      const payload = {
+        name: formData.name.trim(),
+        phone: formData.phone.trim() || null,
+        job_title: formData.job_title.trim() || null,
+        location: formData.location.trim() || null,
+        company: formData.company.trim() || null,
+        business_size: formData.business_size.trim() || null,
+        industry: formData.industry.trim() || null,
+        business_need: formData.business_need.trim() || null,
+        bio: formData.bio.trim() || null,
+      };
+
+      const response = await updateProfile(payload);
+
+      const updatedUser = response?.data?.user || response?.user || null;
+
+      if (updatedUser) {
+        setFormData({
+          name: updatedUser.name || "",
+          phone: updatedUser.phone || "",
+          job_title: updatedUser.job_title || "",
+          location: updatedUser.location || "",
+          company: updatedUser.company || "",
+          business_size: updatedUser.business_size || "",
+          industry: updatedUser.industry || "",
+          business_need: updatedUser.business_need || "",
+          bio: updatedUser.bio || "",
+        });
+      }
+
+      setSaveStatus("Profile updated successfully.");
+
+      setTimeout(() => {
+        setSaveStatus("");
+      }, 3000);
+    } catch (error) {
+      console.error("Profile update failed:", error);
+
+      setErrorMessage(
+        error?.message || "Failed to update profile. Please try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Public profile
+  |--------------------------------------------------------------------------
+  */
+
+  const handleViewPublicProfile = () => {
+    if (!authUser?.id) return;
+
+    window.open(`/profile/${authUser.id}`, "_blank", "noopener,noreferrer");
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Render
+  |--------------------------------------------------------------------------
+  */
+
+  return (
+    <div className="profile-page">
+      {/* ======================================================
+          PROFILE HEADER
+      ====================================================== */}
+
+      <section className="profile-header">
+        <div className="profile-header-main">
+          <div className="profile-avatar">
+            {avatar ? (
+              <img src={avatar} alt={fullName} />
+            ) : (
+              <span>{initials}</span>
+            )}
+          </div>
+
+          <div className="profile-header-info">
+            <h1>{fullName}</h1>
+
+            <p>{email}</p>
+
+            <span className="profile-member">Member since {memberSince}</span>
+          </div>
         </div>
 
         <button
           type="button"
-          className="profile-edit-button"
+          className="profile-public-button"
+          onClick={handleViewPublicProfile}
         >
-          <Icon name="settings" size={17} />
-          Edit Profile
+          <Icon name="external-link" />
+          View Public Profile
         </button>
       </section>
 
-      {/* Personal Information */}
-      <section className="profile-section">
-        <div className="profile-section-header">
+      {/* ======================================================
+          PROFILE COMPLETENESS
+      ====================================================== */}
+
+      <section className="profile-completion-card">
+        <div className="profile-completion-info">
           <div>
-            <h2>Personal Information</h2>
+            <h3>Profile Completeness</h3>
+
             <p>
-              Your basic account information.
+              Complete your profile to get more accurate software
+              recommendations.
             </p>
           </div>
 
-          <Icon name="user" size={21} />
+          <strong>{profileCompleteness}%</strong>
         </div>
 
-        <div className="profile-grid">
-          <div className="profile-field">
-            <span>Full name</span>
-            <strong>{fullName}</strong>
-          </div>
-
-          <div className="profile-field">
-            <span>Email</span>
-            <strong>{email}</strong>
-          </div>
+        <div className="profile-progress-track">
+          <div
+            className="profile-progress-bar"
+            style={{
+              width: `${profileCompleteness}%`,
+            }}
+          />
         </div>
       </section>
 
-      {/* Business Profile */}
-      <section className="profile-section">
-        <div className="profile-section-header">
-          <div>
-            <h2>Business Profile</h2>
-            <p>
-              Information used to personalize software recommendations.
-            </p>
+      {/* ======================================================
+          TABS
+      ====================================================== */}
+
+      <div className="profile-tabs">
+        <button
+          type="button"
+          className={
+            activeTab === "personal" ? "profile-tab active" : "profile-tab"
+          }
+          onClick={() => setActiveTab("personal")}
+        >
+          Personal Information
+        </button>
+
+        <button
+          type="button"
+          className={
+            activeTab === "business" ? "profile-tab active" : "profile-tab"
+          }
+          onClick={() => setActiveTab("business")}
+        >
+          Business Information
+        </button>
+
+        <button
+          type="button"
+          className={
+            activeTab === "preferences" ? "profile-tab active" : "profile-tab"
+          }
+          onClick={() => setActiveTab("preferences")}
+        >
+          Preferences
+        </button>
+
+        <button
+          type="button"
+          className={
+            activeTab === "security" ? "profile-tab active" : "profile-tab"
+          }
+          onClick={() => setActiveTab("security")}
+        >
+          Security
+        </button>
+      </div>
+
+      {/* ======================================================
+          PERSONAL INFORMATION
+      ====================================================== */}
+
+      {activeTab === "personal" && (
+        <form className="profile-section" onSubmit={handleSaveProfile}>
+          <div className="profile-section-header">
+            <div>
+              <h2>Personal Information</h2>
+
+              <p>Manage your personal information and contact details.</p>
+            </div>
           </div>
 
-          <Icon name="chart" size={21} />
-        </div>
+          <div className="profile-form-grid">
+            <div className="profile-field">
+              <label htmlFor="name">Full Name</label>
 
-        <div className="profile-grid">
-          <div className="profile-field">
-            <span>Company</span>
-            <strong>{company}</strong>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                value={formData.name}
+                onChange={handleChange}
+                className="profile-input"
+                placeholder="Enter your full name"
+                required
+              />
+            </div>
+
+            <div className="profile-field">
+              <label htmlFor="email">Email Address</label>
+
+              <input
+                id="email"
+                type="email"
+                value={email}
+                className="profile-input"
+                disabled
+              />
+
+              <small>Email address cannot be changed here.</small>
+            </div>
+
+            <div className="profile-field">
+              <label htmlFor="phone">Phone Number</label>
+
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                className="profile-input"
+                placeholder="Enter your phone number"
+              />
+            </div>
+
+            <div className="profile-field">
+              <label htmlFor="job_title">Job Title</label>
+
+              <input
+                id="job_title"
+                name="job_title"
+                type="text"
+                value={formData.job_title}
+                onChange={handleChange}
+                className="profile-input"
+                placeholder="e.g. Product Manager"
+              />
+            </div>
+
+            <div className="profile-field">
+              <label htmlFor="location">Location</label>
+
+              <input
+                id="location"
+                name="location"
+                type="text"
+                value={formData.location}
+                onChange={handleChange}
+                className="profile-input"
+                placeholder="e.g. Bandung, Indonesia"
+              />
+            </div>
           </div>
 
-          <div className="profile-field">
-            <span>Business size</span>
-            <strong>
-              {user?.business_size || "Not set"}
-            </strong>
+          <div className="profile-field profile-bio-field">
+            <label htmlFor="bio">Bio</label>
+
+            <textarea
+              id="bio"
+              name="bio"
+              value={formData.bio}
+              onChange={handleChange}
+              className="profile-textarea"
+              placeholder="Tell us a little about yourself..."
+              rows={5}
+              maxLength={1000}
+            />
+
+            <small>{formData.bio.length}/1000 characters</small>
           </div>
 
-          <div className="profile-field">
-            <span>Industry</span>
-            <strong>
-              {user?.industry || "Not set"}
-            </strong>
+          {/* ==================================================
+              SAVE STATUS
+          ================================================== */}
+
+          {saveStatus && (
+            <div className="profile-success">
+              <Icon name="check" />
+              <span>{saveStatus}</span>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="profile-error">
+              <Icon name="alert-circle" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          <div className="profile-actions">
+            <button
+              type="submit"
+              className="profile-save-button"
+              disabled={saving}
+            >
+              {saving ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Icon name="check" />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* ======================================================
+          BUSINESS INFORMATION
+      ====================================================== */}
+
+      {activeTab === "business" && (
+        <form className="profile-section" onSubmit={handleSaveProfile}>
+          <div className="profile-section-header">
+            <div>
+              <h2>Business Information</h2>
+
+              <p>
+                Tell us about your company so we can provide more relevant
+                recommendations.
+              </p>
+            </div>
           </div>
 
-          <div className="profile-field">
-            <span>Business needs</span>
-            <strong>
-              {user?.business_need || "Not set"}
-            </strong>
-          </div>
-        </div>
-      </section>
+          <div className="profile-form-grid">
+            <div className="profile-field">
+              <label htmlFor="company">Company</label>
 
-      {/* Preferences */}
-      <section className="profile-section">
-        <div className="profile-section-header">
-          <div>
-            <h2>Preferences</h2>
-            <p>
-              Control how Software Empire personalizes your experience.
-            </p>
-          </div>
+              <input
+                id="company"
+                name="company"
+                type="text"
+                value={formData.company}
+                onChange={handleChange}
+                className="profile-input"
+                placeholder="Enter company name"
+              />
+            </div>
 
-          <Icon name="spark" size={21} />
-        </div>
+            <div className="profile-field">
+              <label htmlFor="business_size">Business Size</label>
 
-        <div className="profile-option">
-          <div>
-            <strong>Personalized Recommendations</strong>
-            <p>
-              Use your business profile to provide more relevant
-              software recommendations.
-            </p>
-          </div>
+              <select
+                id="business_size"
+                name="business_size"
+                value={formData.business_size}
+                onChange={handleChange}
+                className="profile-input"
+              >
+                <option value="">Select business size</option>
+                <option value="Micro">Micro</option>
+                <option value="Small">Small</option>
+                <option value="Medium">Medium</option>
+                <option value="Large">Large</option>
+                <option value="Enterprise">Enterprise</option>
+              </select>
+            </div>
 
-          <span className="profile-status">
-            Enabled
-          </span>
-        </div>
+            <div className="profile-field">
+              <label htmlFor="industry">Industry</label>
 
-        <div className="profile-option">
-          <div>
-            <strong>Email Notifications</strong>
-            <p>
-              Receive updates about recommendations, reviews,
-              and implementation requests.
-            </p>
-          </div>
+              <input
+                id="industry"
+                name="industry"
+                type="text"
+                value={formData.industry}
+                onChange={handleChange}
+                className="profile-input"
+                placeholder="e.g. Technology"
+              />
+            </div>
 
-          <span className="profile-status">
-            Enabled
-          </span>
-        </div>
-      </section>
+            <div className="profile-field">
+              <label htmlFor="business_need">Primary Business Need</label>
 
-      {/* Account Security */}
-      <section className="profile-section">
-        <div className="profile-section-header">
-          <div>
-            <h2>Account Security</h2>
-            <p>
-              Manage your account access and security.
-            </p>
-          </div>
-
-          <Icon name="settings" size={21} />
-        </div>
-
-        <div className="profile-security-row">
-          <div>
-            <strong>Password</strong>
-            <p>
-              Keep your account secure with a strong password.
-            </p>
+              <input
+                id="business_need"
+                name="business_need"
+                type="text"
+                value={formData.business_need}
+                onChange={handleChange}
+                className="profile-input"
+                placeholder="e.g. CRM, Accounting, HR"
+              />
+            </div>
           </div>
 
-          <button
-            type="button"
-            className="profile-secondary-button"
-          >
-            Change Password
-          </button>
-        </div>
-      </section>
+          {saveStatus && (
+            <div className="profile-success">
+              <Icon name="check" />
+              <span>{saveStatus}</span>
+            </div>
+          )}
 
-      {/* Account Summary */}
-      <section className="profile-section">
-        <div className="profile-section-header">
-          <div>
-            <h2>Account Summary</h2>
-            <p>
-              Overview of your activity on Software Empire.
-            </p>
+          {errorMessage && (
+            <div className="profile-error">
+              <Icon name="alert-circle" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          <div className="profile-actions">
+            <button
+              type="submit"
+              className="profile-save-button"
+              disabled={saving}
+            >
+              {saving ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Icon name="check" />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* ======================================================
+          PREFERENCES
+      ====================================================== */}
+
+      {activeTab === "preferences" && (
+        <section className="profile-section">
+          <div className="profile-section-header">
+            <div>
+              <h2>Preferences</h2>
+
+              <p>Customize your Software Empire experience.</p>
+            </div>
           </div>
 
-          <Icon name="file" size={21} />
-        </div>
+          <div className="profile-preferences">
+            <div className="profile-preference-item">
+              <div>
+                <h3>Software Recommendations</h3>
 
-        <div className="profile-summary-grid">
-          <div className="profile-summary-card">
-            <Icon name="bookmark" size={20} />
-            <span>Saved Software</span>
-            <strong>—</strong>
+                <p>
+                  Receive personalized software recommendations based on your
+                  profile.
+                </p>
+              </div>
+
+              <label className="profile-switch">
+                <input type="checkbox" defaultChecked />
+                <span />
+              </label>
+            </div>
+
+            <div className="profile-preference-item">
+              <div>
+                <h3>Product Updates</h3>
+
+                <p>Receive updates about new software and platform features.</p>
+              </div>
+
+              <label className="profile-switch">
+                <input type="checkbox" defaultChecked />
+                <span />
+              </label>
+            </div>
+
+            <div className="profile-preference-item">
+              <div>
+                <h3>Newsletter</h3>
+
+                <p>Receive Software Empire insights and industry updates.</p>
+              </div>
+
+              <label className="profile-switch">
+                <input type="checkbox" defaultChecked />
+                <span />
+              </label>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ======================================================
+          SECURITY
+      ====================================================== */}
+
+      {activeTab === "security" && (
+        <section className="profile-section">
+          <div className="profile-section-header">
+            <div>
+              <h2>Security</h2>
+
+              <p>Manage your account security and password.</p>
+            </div>
           </div>
 
-          <div className="profile-summary-card">
-            <Icon name="compare" size={20} />
-            <span>Comparisons</span>
-            <strong>—</strong>
+          <div className="profile-security-list">
+            <div className="profile-security-item">
+              <div className="profile-security-icon">
+                <Icon name="lock" />
+              </div>
+
+              <div>
+                <h3>Password</h3>
+
+                <p>Your password is securely encrypted.</p>
+              </div>
+
+              <button type="button" className="profile-secondary-button">
+                Change Password
+              </button>
+            </div>
+
+            <div className="profile-security-item">
+              <div className="profile-security-icon">
+                <Icon name="shield" />
+              </div>
+
+              <div>
+                <h3>Account Protection</h3>
+
+                <p>Your account is protected by authentication.</p>
+              </div>
+
+              <span className="profile-security-status">Protected</span>
+            </div>
           </div>
-
-          <div className="profile-summary-card">
-            <Icon name="star" size={20} />
-            <span>Reviews</span>
-            <strong>—</strong>
-          </div>
-
-          <div className="profile-summary-card">
-            <Icon name="file" size={20} />
-            <span>Implementation Requests</span>
-            <strong>—</strong>
-          </div>
-        </div>
-      </section>
-
-      {/* Quick Actions */}
-      <section className="profile-section">
-        <div className="profile-section-header">
-          <div>
-            <h2>Quick Actions</h2>
-            <p>
-              Quickly access other account features.
-            </p>
-          </div>
-
-          <Icon name="arrow" size={21} />
-        </div>
-
-        <div className="profile-actions">
-          <button type="button">
-            <Icon name="bookmark" size={18} />
-            Saved Software
-          </button>
-
-          <button type="button">
-            <Icon name="compare" size={18} />
-            My Comparisons
-          </button>
-
-          <button type="button">
-            <Icon name="lightbulb" size={18} />
-            Recommendations
-          </button>
-
-          <button type="button">
-            <Icon name="star" size={18} />
-            My Reviews
-          </button>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }
+
+export default Profile;

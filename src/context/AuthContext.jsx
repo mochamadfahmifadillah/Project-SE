@@ -3,7 +3,8 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   registerUser,
   loginUser,
-  getMe,
+  getMe as getCurrentUser,
+  updateProfile as updateUserProfile,
   logoutUser,
 } from "../services/authService";
 
@@ -148,16 +149,6 @@ function getUserRoles(user) {
  * Backend:
  *
  * user.roles[].permissions[]
- *
- * Permission can be:
- *
- * "dashboard.view"
- *
- * or:
- *
- * {
- *   name: "dashboard.view"
- * }
  */
 function getUserPermissions(user) {
   if (!user) {
@@ -273,7 +264,7 @@ export function AuthProvider({ children }) {
         |--------------------------------------------------------------------------
         */
 
-        const response = await getMe();
+        const response = await getCurrentUser();
 
         const currentUser = extractUser(response);
 
@@ -306,6 +297,46 @@ export function AuthProvider({ children }) {
       cancelled = true;
     };
   }, []);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Get Current User
+  |--------------------------------------------------------------------------
+  */
+
+  const getMe = async () => {
+    const response = await getCurrentUser();
+
+    const currentUser = extractUser(response);
+
+    if (currentUser) {
+      setUser(currentUser);
+
+      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+    }
+
+    return response;
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Update Profile
+  |--------------------------------------------------------------------------
+  */
+
+  const updateProfile = async (payload) => {
+    const response = await updateUserProfile(payload);
+
+    const updatedUser = extractUser(response);
+
+    if (updatedUser) {
+      setUser(updatedUser);
+
+      localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+    }
+
+    return response;
+  };
 
   /*
   |--------------------------------------------------------------------------
@@ -501,6 +532,10 @@ export function AuthProvider({ children }) {
       hasRole,
 
       hasPermission,
+
+      getMe,
+
+      updateProfile,
 
       login,
 
