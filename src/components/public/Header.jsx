@@ -39,6 +39,20 @@ export default function Header() {
       );
     }
 
+    if (path === "/learn") {
+      return (
+        location.pathname === "/learn" ||
+        location.pathname.startsWith("/learn/")
+      );
+    }
+
+    if (path === "/admin/vendors") {
+      return (
+        location.pathname === "/admin/vendors" ||
+        location.pathname.startsWith("/admin/vendors/")
+      );
+    }
+
     return location.pathname === path;
   };
 
@@ -95,6 +109,14 @@ export default function Header() {
         >
           Learn
         </button>
+
+        <button
+          type="button"
+          className={isActive("/admin/vendors") ? "active" : ""}
+          onClick={() => navigate("/admin/vendors")}
+        >
+          For Vendors
+        </button>
       </nav>
 
       {/* =====================================================
@@ -103,7 +125,10 @@ export default function Header() {
       <div className="header-actions">
         {/* AUTH LOADING */}
         {loading && (
-          <div className="header-auth-loading" aria-label="Loading account" />
+          <div
+            className="header-auth-loading"
+            aria-label="Loading account"
+          />
         )}
 
         {/* ===================================================
