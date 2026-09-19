@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronDown, LogOut } from "lucide-react";
 
@@ -9,6 +10,9 @@ export default function Header() {
   const location = useLocation();
 
   const { user, loading, isAuthenticated, logout } = useAuthContext();
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef(null);
 
   const userName = user?.name || "";
 
@@ -56,6 +60,34 @@ export default function Header() {
     return location.pathname === path;
   };
 
+  const handleNavigation = (path) => {
+    setMobileMenuOpen(false);
+    navigate(path);
+  };
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target)
+      ) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Close menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   return (
     <header className="topbar">
       {/* =====================================================
@@ -75,9 +107,9 @@ export default function Header() {
       </button>
 
       {/* =====================================================
-          NAVIGATION
+          DESKTOP NAVIGATION
       ====================================================== */}
-      <nav className="topnav" aria-label="Main navigation">
+      <nav className="topnav desktop-nav" aria-label="Main navigation">
         <button
           type="button"
           className={isActive("/software") ? "active" : ""}
@@ -120,15 +152,72 @@ export default function Header() {
       </nav>
 
       {/* =====================================================
+          MOBILE MENU
+      ====================================================== */}
+      <div className="mobile-nav-wrapper" ref={mobileMenuRef}>
+        <button
+          type="button"
+          className={`mobile-menu-button ${mobileMenuOpen ? "active" : ""}`}
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          aria-expanded={mobileMenuOpen}
+          aria-haspopup="true"
+        >
+          <span>Menu</span>
+          <ChevronDown size={15} className={mobileMenuOpen ? "rotate" : ""} />
+        </button>
+
+        {mobileMenuOpen && (
+          <div className="mobile-dropdown">
+            <button
+              type="button"
+              className={isActive("/software") ? "active" : ""}
+              onClick={() => handleNavigation("/software")}
+            >
+              Software
+            </button>
+
+            <button
+              type="button"
+              className={isActive("/compare") ? "active" : ""}
+              onClick={() => handleNavigation("/compare")}
+            >
+              Compare
+            </button>
+
+            <button
+              type="button"
+              className={isActive("/recommend") ? "active" : ""}
+              onClick={() => handleNavigation("/recommend")}
+            >
+              Find My Software
+            </button>
+
+            <button
+              type="button"
+              className={isActive("/learn") ? "active" : ""}
+              onClick={() => handleNavigation("/learn")}
+            >
+              Learn
+            </button>
+
+            <button
+              type="button"
+              className={isActive("/admin/vendors") ? "active" : ""}
+              onClick={() => handleNavigation("/admin/vendors")}
+            >
+              For Vendors
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* =====================================================
           ACTIONS
       ====================================================== */}
       <div className="header-actions">
         {/* AUTH LOADING */}
         {loading && (
-          <div
-            className="header-auth-loading"
-            aria-label="Loading account"
-          />
+          <div className="header-auth-loading" aria-label="Loading account" />
         )}
 
         {/* ===================================================

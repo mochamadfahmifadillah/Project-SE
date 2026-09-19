@@ -21,81 +21,37 @@ const groups = [
   {
     label: "CATALOG",
     items: [
-      {
-        label: "Software",
-        path: "/admin/software",
-        icon: Package,
-      },
-      {
-        label: "Vendors",
-        path: "/admin/vendors",
-        icon: Building2,
-      },
-      {
-        label: "Categories",
-        path: "/admin/categories",
-        icon: FolderTree,
-      },
-      {
-        label: "Features",
-        path: "/admin/features",
-        icon: Layers3,
-      },
+      { label: "Software", path: "/admin/software", icon: Package },
+      { label: "Vendors", path: "/admin/vendors", icon: Building2 },
+      { label: "Categories", path: "/admin/categories", icon: FolderTree },
+      { label: "Features", path: "/admin/features", icon: Layers3 },
       {
         label: "Industries",
         path: "/admin/industries",
         icon: BriefcaseBusiness,
       },
-      {
-        label: "Business Sizes",
-        path: "/admin/business-sizes",
-        icon: Users,
-      },
-      {
-        label: "Integrations",
-        path: "/admin/integrations",
-        icon: Puzzle,
-      },
+      { label: "Business Sizes", path: "/admin/business-sizes", icon: Users },
+      { label: "Integrations", path: "/admin/integrations", icon: Puzzle },
     ],
   },
   {
     label: "ENGAGEMENT",
     items: [
-      {
-        label: "Reviews",
-        path: "/admin/reviews",
-        icon: Star,
-      },
+      { label: "Reviews", path: "/admin/reviews", icon: Star },
       {
         label: "Implementation Leads",
         path: "/admin/implementation-leads",
         icon: ClipboardList,
       },
-      {
-        label: "Partners",
-        path: "/admin/partners",
-        icon: Handshake,
-      },
+      { label: "Partners", path: "/admin/partners", icon: Handshake },
     ],
   },
   {
     label: "CONTENT",
     items: [
-      {
-        label: "Articles",
-        path: "/admin/articles",
-        icon: FileText,
-      },
-      {
-        label: "Tutorials",
-        path: "/admin/tutorials",
-        icon: FileText,
-      },
-      {
-        label: "Case Studies",
-        path: "/admin/case-studies",
-        icon: FileText,
-      },
+      { label: "Articles", path: "/admin/articles", icon: FileText },
+      { label: "Tutorials", path: "/admin/tutorials", icon: FileText },
+      { label: "Case Studies", path: "/admin/case-studies", icon: FileText },
     ],
   },
   {
@@ -111,21 +67,9 @@ const groups = [
   {
     label: "SYSTEM",
     items: [
-      {
-        label: "Users & Roles",
-        path: "/admin/users",
-        icon: Users,
-      },
-      {
-        label: "Settings",
-        path: "/admin/settings",
-        icon: Settings,
-      },
-      {
-        label: "Audit Logs",
-        path: "/admin/audit-logs",
-        icon: ScrollText,
-      },
+      { label: "Users & Roles", path: "/admin/users", icon: Users },
+      { label: "Settings", path: "/admin/settings", icon: Settings },
+      { label: "Audit Logs", path: "/admin/audit-logs", icon: ScrollText },
     ],
   },
 ];
@@ -143,9 +87,7 @@ function getInitials(name = "") {
 }
 
 function getRoleName(user) {
-  if (!user) {
-    return "Administrator";
-  }
+  if (!user) return "Administrator";
 
   if (typeof user.role === "string") {
     return user.role;
@@ -168,20 +110,14 @@ export default function AdminSidebar({ user = null }) {
 
   return (
     <aside className="admin-side">
-      {/* ================================================================
-          BRAND
-      ================================================================= */}
-
+      {/* BRAND */}
       <div className="admin-brand">
         <b>SOFTWARE</b>
         <strong>EMPIRE</strong>
         <small>ADMIN PORTAL</small>
       </div>
 
-      {/* ================================================================
-          DASHBOARD
-      ================================================================= */}
-
+      {/* DASHBOARD */}
       <NavLink
         to="/admin"
         end
@@ -190,14 +126,10 @@ export default function AdminSidebar({ user = null }) {
         }
       >
         <LayoutDashboard size={17} />
-
         <span>Dashboard</span>
       </NavLink>
 
-      {/* ================================================================
-          MENU
-      ================================================================= */}
-
+      {/* MENU */}
       <nav className="admin-nav">
         {groups.map((group) => (
           <div className="admin-nav-group" key={group.label}>
@@ -215,7 +147,6 @@ export default function AdminSidebar({ user = null }) {
                   }
                 >
                   <Icon size={16} />
-
                   <span>{item.label}</span>
                 </NavLink>
               );
@@ -224,16 +155,14 @@ export default function AdminSidebar({ user = null }) {
         ))}
       </nav>
 
-      {/* ================================================================
-          CURRENT USER
-      ================================================================= */}
-
+      {/* CURRENT USER */}
       <div className="admin-side-user">
-        <div className="admin-side-avatar">{getInitials(userName)}</div>
+        <div className="admin-side-avatar">
+          {getInitials(userName)}
+        </div>
 
         <div className="admin-side-user-info">
           <strong>{userName}</strong>
-
           <span>{userRole}</span>
         </div>
       </div>
