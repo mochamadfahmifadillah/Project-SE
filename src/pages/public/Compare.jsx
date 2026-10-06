@@ -16,7 +16,27 @@ import {
 import PublicLayout from "../../layouts/PublicLayout";
 import { getSoftware } from "../../services/softwareService";
 import { compareSoftware } from "../../services/compareService";
-import "../../styles/compare.css"
+import "../../styles/compare.css";
+
+// =====================================================
+// SOFTWARE LOGOS
+// =====================================================
+
+import zohoLogo from "../../assets/logos/zoho.svg";
+import hubspotLogo from "../../assets/logos/hubspot.png";
+import salesforceLogo from "../../assets/logos/salesforces.png";
+import odooLogo from "../../assets/logos/odoo.png";
+import dynamicsLogo from "../../assets/logos/dynamics.png";
+import bamboohrLogo from "../../assets/logos/bamboo.png";
+
+const softwareLogos = {
+  "Zoho CRM": zohoLogo,
+  "HubSpot CRM": hubspotLogo,
+  "Salesforce Sales Cloud": salesforceLogo,
+  "Odoo ERP": odooLogo,
+  "Microsoft Dynamics 365": dynamicsLogo,
+  BambooHR: bamboohrLogo,
+};
 
 function Compare() {
   const navigate = useNavigate();
@@ -50,11 +70,18 @@ function Compare() {
 
         if (cancelled) return;
 
-        setSoftware(data);
+        // Tambahkan logo lokal sebagai fallback.
+        // Kalau API sudah punya logo, logo dari API tetap digunakan.
+        const softwareWithLogos = data.map((item) => ({
+          ...item,
+          logo: item.logo || softwareLogos[item.name] || null,
+        }));
 
-        if (data.length >= 2) {
+        setSoftware(softwareWithLogos);
+
+        if (softwareWithLogos.length >= 2) {
           setSelected((current) => {
-            const availableIds = data.map((item) => item.id);
+            const availableIds = softwareWithLogos.map((item) => item.id);
 
             const validSelected = current.filter((id) =>
               availableIds.includes(id),
@@ -64,8 +91,8 @@ function Compare() {
               return validSelected.slice(0, 4);
             }
 
-            return data
-              .slice(0, Math.min(4, data.length))
+            return softwareWithLogos
+              .slice(0, Math.min(4, softwareWithLogos.length))
               .map((item) => item.id);
           });
         }
@@ -129,7 +156,6 @@ function Compare() {
 
   const removeSoftware = (id) => {
     setSelected((current) => current.filter((itemId) => itemId !== id));
-
     setComparison(null);
   };
 
@@ -184,6 +210,7 @@ function Compare() {
           text: "Compare software with Software Empire.",
           url: window.location.href,
         });
+
         return;
       }
 
@@ -202,10 +229,12 @@ function Compare() {
   */
 
   const getLogo = (item) => {
-    if (item.logo) {
+    const logo = item.logo || softwareLogos[item.name];
+
+    if (logo) {
       return (
         <img
-          src={item.logo}
+          src={logo}
           alt={`${item.name} logo`}
           className="comparison-logo-image"
         />
@@ -244,7 +273,9 @@ function Compare() {
     },
     {
       label: "Email Tracking",
-      values: chosen.map((_, index) => (index === 2 ? "partial" : "yes")),
+      values: chosen.map((_, index) =>
+        index === 2 ? "partial" : "yes",
+      ),
     },
     {
       label: "Sales Automation",
@@ -333,6 +364,12 @@ function Compare() {
     );
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | RENDER
+  |--------------------------------------------------------------------------
+  */
+
   return (
     <PublicLayout>
       <main className="compare-page">
@@ -363,7 +400,11 @@ function Compare() {
               className={`compare-action-button ${saved ? "active" : ""}`}
               onClick={handleSave}
             >
-              <Bookmark size={15} fill={saved ? "currentColor" : "none"} />
+              <Bookmark
+                size={15}
+                fill={saved ? "currentColor" : "none"}
+              />
+
               {saved ? "Saved" : "Save Comparison"}
             </button>
 
@@ -385,12 +426,17 @@ function Compare() {
         <section className="selected-software-section">
           {chosen.map((item) => (
             <div className="selected-software-card" key={item.id}>
-              <div className="selected-software-logo">{getLogo(item)}</div>
+              <div className="selected-software-logo">
+                {getLogo(item)}
+              </div>
 
               <div className="selected-software-info">
                 <strong>{item.name}</strong>
 
-                <button type="button" onClick={() => removeSoftware(item.id)}>
+                <button
+                  type="button"
+                  onClick={() => removeSoftware(item.id)}
+                >
                   Remove
                 </button>
               </div>
@@ -468,7 +514,9 @@ function Compare() {
                   <button
                     key={item.name}
                     type="button"
-                    className={activeSection === item.name ? "active" : ""}
+                    className={
+                      activeSection === item.name ? "active" : ""
+                    }
                     onClick={() => setActiveSection(item.name)}
                   >
                     <span className="nav-icon">{item.icon}</span>
@@ -484,10 +532,14 @@ function Compare() {
                 <h3>Not sure yet?</h3>
 
                 <p>
-                  Get AI-powered recommendation based on your business needs.
+                  Get AI-powered recommendation based on your business
+                  needs.
                 </p>
 
-                <button type="button" onClick={() => navigate("/recommend")}>
+                <button
+                  type="button"
+                  onClick={() => navigate("/recommend")}
+                >
                   <Star size={13} />
                   Get Recommendation
                 </button>
@@ -550,20 +602,32 @@ function Compare() {
                   </div>
 
                   {chosen.map((item) => (
-                    <div className="product-column-header" key={item.id}>
+                    <div
+                      className="product-column-header"
+                      key={item.id}
+                    >
                       <div className="product-heading">
-                        <div className="matrix-logo">{getLogo(item)}</div>
+                        <div className="matrix-logo">
+                          {getLogo(item)}
+                        </div>
 
                         <div>
                           <h3>{item.name}</h3>
 
                           <div className="matrix-rating">
-                            <Star size={11} fill="#f4a91b" color="#f4a91b" />
+                            <Star
+                              size={11}
+                              fill="#f4a91b"
+                              color="#f4a91b"
+                            />
 
                             <strong>{getRating(item)}</strong>
 
                             <span>
-                              ({item.reviews || item.review_count || "2,456"}{" "}
+                              (
+                              {item.reviews ||
+                                item.review_count ||
+                                "2,456"}{" "}
                               reviews)
                             </span>
                           </div>
@@ -573,7 +637,9 @@ function Compare() {
                       <button
                         type="button"
                         className="matrix-details-button"
-                        onClick={() => navigate(`/software/${item.slug}`)}
+                        onClick={() =>
+                          navigate(`/software/${item.slug}`)
+                        }
                       >
                         View Details
                       </button>
@@ -584,10 +650,15 @@ function Compare() {
                 {/* BASIC INFO */}
 
                 <div className="matrix-row">
-                  <div className="matrix-label-cell">Starting Price</div>
+                  <div className="matrix-label-cell">
+                    Starting Price
+                  </div>
 
                   {chosen.map((item) => (
-                    <div className="matrix-value-cell price-cell" key={item.id}>
+                    <div
+                      className="matrix-value-cell price-cell"
+                      key={item.id}
+                    >
                       <span>Starting from</span>
                       <strong>{getPrice(item)}</strong>
                       <small>/ user / month</small>
@@ -599,7 +670,10 @@ function Compare() {
                   <div className="matrix-label-cell">Best For</div>
 
                   {chosen.map((item, index) => (
-                    <div className="matrix-value-cell" key={item.id}>
+                    <div
+                      className="matrix-value-cell"
+                      key={item.id}
+                    >
                       {item.best_for ||
                         [
                           "Small & Medium Business",
@@ -613,7 +687,9 @@ function Compare() {
                 </div>
 
                 <div className="matrix-row">
-                  <div className="matrix-label-cell">Deployment</div>
+                  <div className="matrix-label-cell">
+                    Deployment
+                  </div>
 
                   {chosen.map((item, index) => (
                     <div
@@ -621,27 +697,43 @@ function Compare() {
                       key={item.id}
                     >
                       <Cloud size={14} />
+
                       {item.deployment ||
-                        (index === 3 ? "Cloud / On-Premise" : "Cloud")}
+                        (index === 3
+                          ? "Cloud / On-Premise"
+                          : "Cloud")}
                     </div>
                   ))}
                 </div>
 
                 <div className="matrix-row">
-                  <div className="matrix-label-cell">Free Trial</div>
+                  <div className="matrix-label-cell">
+                    Free Trial
+                  </div>
 
                   {chosen.map((item, index) => (
-                    <div className="matrix-value-cell" key={item.id}>
-                      {item.free_trial || [15, 14, 30, 15][index] || 15} Days
+                    <div
+                      className="matrix-value-cell"
+                      key={item.id}
+                    >
+                      {item.free_trial ||
+                        [15, 14, 30, 15][index] ||
+                        15}{" "}
+                      Days
                     </div>
                   ))}
                 </div>
 
                 <div className="matrix-row">
-                  <div className="matrix-label-cell">User Limit</div>
+                  <div className="matrix-label-cell">
+                    User Limit
+                  </div>
 
                   {chosen.map((item) => (
-                    <div className="matrix-value-cell" key={item.id}>
+                    <div
+                      className="matrix-value-cell"
+                      key={item.id}
+                    >
                       {item.user_limit || "No Limit"}
                     </div>
                   ))}
@@ -655,7 +747,9 @@ function Compare() {
 
                 {featureRows.map((row) => (
                   <div className="matrix-row" key={row.label}>
-                    <div className="matrix-label-cell">{row.label}</div>
+                    <div className="matrix-label-cell">
+                      {row.label}
+                    </div>
 
                     {row.values.map((status, index) => (
                       <div
@@ -671,10 +765,15 @@ function Compare() {
                 {/* INTEGRATIONS */}
 
                 <div className="matrix-row">
-                  <div className="matrix-label-cell">Integrations</div>
+                  <div className="matrix-label-cell">
+                    Integrations
+                  </div>
 
                   {chosen.map((item, index) => (
-                    <div className="matrix-value-cell" key={item.id}>
+                    <div
+                      className="matrix-value-cell"
+                      key={item.id}
+                    >
                       {item.integrations ||
                         ["500+", "1500+", "3000+", "1000+"][index] ||
                         "500+"}
@@ -685,11 +784,17 @@ function Compare() {
                 {/* CUSTOMER SUPPORT */}
 
                 <div className="matrix-row">
-                  <div className="matrix-label-cell">Customer Support</div>
+                  <div className="matrix-label-cell">
+                    Customer Support
+                  </div>
 
                   {chosen.map((item) => (
-                    <div className="matrix-value-cell" key={item.id}>
-                      {item.customer_support || "Email, Chat, Phone"}
+                    <div
+                      className="matrix-value-cell"
+                      key={item.id}
+                    >
+                      {item.customer_support ||
+                        "Email, Chat, Phone"}
                     </div>
                   ))}
                 </div>
@@ -704,7 +809,8 @@ function Compare() {
                   {chosen.map((item) => {
                     const score = Number(item.rating) || 4.5;
 
-                    const percentage = Math.min(score / 5, 1) * 100;
+                    const percentage =
+                      Math.min(score / 5, 1) * 100;
 
                     return (
                       <div
@@ -713,7 +819,6 @@ function Compare() {
                       >
                         <div className="score-number">
                           <strong>{score.toFixed(1)}</strong>
-
                           <span>/ 5</span>
                         </div>
 
@@ -731,8 +836,8 @@ function Compare() {
               </div>
 
               <div className="comparison-footnote">
-                Scores are based on user reviews and feature completeness. Your
-                experience may vary.
+                Scores are based on user reviews and feature
+                completeness. Your experience may vary.
               </div>
 
               {/* API RESULT */}
@@ -742,10 +847,13 @@ function Compare() {
                   <Check size={16} />
 
                   <div>
-                    <strong>Comparison saved successfully</strong>
+                    <strong>
+                      Comparison saved successfully
+                    </strong>
 
                     <span>
-                      Comparison ID: {comparison.data?.comparison?.id}
+                      Comparison ID:{" "}
+                      {comparison.data?.comparison?.id}
                     </span>
                   </div>
                 </div>
@@ -764,7 +872,10 @@ function Compare() {
 
             <h2>Select at least 2 software</h2>
 
-            <p>Choose two to four software above to start comparing them.</p>
+            <p>
+              Choose two to four software above to start comparing
+              them.
+            </p>
           </div>
         )}
 
@@ -780,16 +891,26 @@ function Compare() {
               onClick={handleCompare}
               disabled={comparing}
             >
-              {comparing ? "Comparing..." : "View Full Comparison"}
+              {comparing
+                ? "Comparing..."
+                : "View Full Comparison"}
             </button>
 
             <button
               type="button"
-              className={`bottom-save-button ${saved ? "active" : ""}`}
+              className={`bottom-save-button ${
+                saved ? "active" : ""
+              }`}
               onClick={handleSave}
             >
-              <Bookmark size={15} fill={saved ? "currentColor" : "none"} />
-              {saved ? "Comparison Saved" : "Save Comparison"}
+              <Bookmark
+                size={15}
+                fill={saved ? "currentColor" : "none"}
+              />
+
+              {saved
+                ? "Comparison Saved"
+                : "Save Comparison"}
             </button>
           </div>
         )}

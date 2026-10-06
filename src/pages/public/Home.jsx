@@ -12,6 +12,13 @@ import sociollaLogo from "../../assets/images/sociolla.webp";
 import mekariLogo from "../../assets/images/mekari.png";
 import bcaLogo from "../../assets/images/bca.png";
 
+import zohoLogo from "../../assets/logos/zoho.svg";
+import hubspotLogo from "../../assets/logos/hubspot.png";
+import salesforceLogo from "../../assets/logos/salesforces.png";
+import odooLogo from "../../assets/logos/odoo.png";
+import dynamicsLogo from "../../assets/logos/dynamics.png";
+import bamboohrLogo from "../../assets/logos/bamboo.png";
+
 import "../../styles/home.css";
 
 const categories = [
@@ -65,19 +72,19 @@ const recommendations = [
     rank: 1,
     name: "Zoho CRM",
     rating: "4.6",
-    logo: "∞",
+    logo: zohoLogo,
   },
   {
     rank: 2,
     name: "HubSpot CRM",
     rating: "4.5",
-    logo: "H",
+    logo: hubspotLogo,
   },
   {
     rank: 3,
     name: "Salesforce Sales Cloud",
     rating: "4.4",
-    logo: "☁",
+    logo: salesforceLogo,
   },
 ];
 
@@ -112,7 +119,7 @@ const fallbackSoftware = [
     rating: 4.6,
     reviews_count: 1240,
     pricing: "$14 / user / month",
-    logo: "∞",
+    logo: zohoLogo,
   },
   {
     id: 2,
@@ -121,7 +128,7 @@ const fallbackSoftware = [
     rating: 4.5,
     reviews_count: 1080,
     pricing: "$15 / user / month",
-    logo: "H",
+    logo: hubspotLogo,
   },
   {
     id: 3,
@@ -130,7 +137,7 @@ const fallbackSoftware = [
     rating: 4.4,
     reviews_count: 980,
     pricing: "$25 / user / month",
-    logo: "☁",
+    logo: salesforceLogo,
   },
   {
     id: 4,
@@ -139,16 +146,16 @@ const fallbackSoftware = [
     rating: 4.3,
     reviews_count: 760,
     pricing: "$24.90 / user / month",
-    logo: "odoo",
+    logo: odooLogo,
   },
   {
     id: 5,
-    name: "Microsoft 365",
-    category: "Productivity",
+    name: "Microsoft Dynamics 365",
+    category: "ERP",
     rating: 4.6,
     reviews_count: 890,
     pricing: "$6 / user / month",
-    logo: "365",
+    logo: dynamicsLogo,
   },
 ];
 
@@ -191,14 +198,63 @@ const trustedBusinesses = [
   },
 ];
 
+/* =========================================================
+   SOFTWARE HELPERS
+   ========================================================= */
+
 function getSoftwareLogo(item, index) {
   if (item?.logo) {
     return item.logo;
   }
 
-  const names = ["∞", "H", "☁", "odoo", "365"];
+  const logos = [
+    zohoLogo,
+    hubspotLogo,
+    salesforceLogo,
+    odooLogo,
+    dynamicsLogo,
+    bamboohrLogo,
+  ];
 
-  return names[index] || item?.name?.slice(0, 2).toUpperCase() || "SW";
+  return logos[index] || null;
+}
+
+function getSoftwareInitial(item) {
+  return item?.name?.slice(0, 2).toUpperCase() || "SW";
+}
+
+function isImageLogo(logo) {
+  return (
+    typeof logo === "string" &&
+    (logo.startsWith("/") ||
+      logo.startsWith("data:") ||
+      logo.startsWith("http://") ||
+      logo.startsWith("https://") ||
+      logo.includes(".svg") ||
+      logo.includes(".png") ||
+      logo.includes(".jpg") ||
+      logo.includes(".jpeg") ||
+      logo.includes(".webp"))
+  );
+}
+
+function SoftwareLogo({ logo, name, className = "" }) {
+  if (isImageLogo(logo)) {
+    return (
+      <img
+        src={logo}
+        alt={`${name} logo`}
+        className={className}
+        loading="lazy"
+      />
+    );
+  }
+
+  return (
+    <span className={className}>
+      {logo || name?.slice(0, 2).toUpperCase() || "SW"}
+    </span>
+  );
 }
 
 function getRating(item) {
@@ -212,7 +268,9 @@ function getReviewCount(item) {
 }
 
 function getPricing(item) {
-  if (item?.pricing) return item.pricing;
+  if (item?.pricing) {
+    return item.pricing;
+  }
 
   if (item?.first_pricing?.price) {
     return `$${item.first_pricing.price} / user / month`;
@@ -229,15 +287,23 @@ function getPricing(item) {
   return "Contact vendor";
 }
 
+/* =========================================================
+   RATING
+   ========================================================= */
+
 function RatingStars({ rating }) {
   return (
     <div className="home-rating">
       <span className="home-stars">★★★★★</span>
 
-      <span className="home-rating-number">{rating.toFixed(1)}</span>
+      <span className="home-rating-number">{Number(rating).toFixed(1)}</span>
     </div>
   );
 }
+
+/* =========================================================
+   HOME
+   ========================================================= */
 
 export default function Home() {
   const popularSoftware =
@@ -350,7 +416,7 @@ export default function Home() {
                       </span>
 
                       <div className="home-recommendation-logo">
-                        {item.logo}
+                        <SoftwareLogo logo={item.logo} name={item.name} />
                       </div>
 
                       <div className="home-recommendation-info">
@@ -476,6 +542,7 @@ export default function Home() {
                     const rating = getRating(item);
                     const reviews = getReviewCount(item);
                     const pricing = getPricing(item);
+                    const logo = getSoftwareLogo(item, index);
 
                     return (
                       <article
@@ -483,7 +550,11 @@ export default function Home() {
                         key={item.id ?? item.name}
                       >
                         <div className="home-software-logo">
-                          {getSoftwareLogo(item, index)}
+                          {logo ? (
+                            <SoftwareLogo logo={logo} name={item.name} />
+                          ) : (
+                            <span>{getSoftwareInitial(item)}</span>
+                          )}
                         </div>
 
                         <h3>{item.name}</h3>
@@ -500,7 +571,7 @@ export default function Home() {
 
                         {reviews > 0 && (
                           <span className="home-software-reviews">
-                            {reviews.toLocaleString()} reviews
+                            {Number(reviews).toLocaleString()} reviews
                           </span>
                         )}
                       </article>
