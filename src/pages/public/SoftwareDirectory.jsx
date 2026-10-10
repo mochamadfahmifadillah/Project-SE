@@ -4,7 +4,32 @@ import PublicLayout from "../../layouts/PublicLayout";
 import Icon from "../../components/common/Icon";
 import { getSoftware } from "../../services/softwareService";
 import { navigate } from "../../utils/helpers";
-import "../../styles/softwareDirectory.css"
+
+import "../../styles/softwareDirectory.css";
+
+// Software logos
+import zohoLogo from "../../assets/logos/zoho.svg";
+import hubspotLogo from "../../assets/logos/Hubspot.png";
+import salesforceLogo from "../../assets/logos/salesforces.png";
+import odooLogo from "../../assets/logos/odoo.png";
+import microsoftDynamicsLogo from "../../assets/logos/dynamics.png";
+import bamboohrLogo from "../../assets/logos/bamboo.png";
+
+// Map logo images to software names.
+// Add other software logos here when needed.
+const softwareLogos = {
+  Zoho: zohoLogo,
+  "Zoho CRM": zohoLogo,
+  HubSpot: hubspotLogo,
+  "HubSpot CRM": hubspotLogo,
+  Salesforce: salesforceLogo,
+  "Salesforce CRM": salesforceLogo,
+  Odoo: odooLogo,
+  "Microsoft Dynamics": microsoftDynamicsLogo,
+  "Microsoft Dynamics 365": microsoftDynamicsLogo,
+  BambooHR: bamboohrLogo,
+};
+
 const PAGE_SIZE = 5;
 
 const getCategory = (item) =>
@@ -38,14 +63,6 @@ const getDescription = (item) =>
   item?.summary ||
   "Software solution designed to help businesses work more efficiently.";
 
-const getLogo = (item) =>
-  item?.logo ||
-  item?.logo_url ||
-  item?.image ||
-  item?.image_url ||
-  item?.icon ||
-  null;
-
 function formatPrice(value) {
   if (value === null || value === undefined || value === "") {
     return "Contact";
@@ -60,6 +77,22 @@ function formatPrice(value) {
 
 function getInitial(name = "") {
   return name.trim().charAt(0).toUpperCase() || "S";
+}
+
+function getSoftwareLogo(name = "") {
+  const normalizedName = name.trim().toLowerCase();
+
+  if (softwareLogos[name]) {
+    return softwareLogos[name];
+  }
+
+  const matchedEntry = Object.entries(softwareLogos).find(
+    ([softwareName]) =>
+      normalizedName === softwareName.toLowerCase() ||
+      normalizedName.startsWith(`${softwareName.toLowerCase()} `),
+  );
+
+  return matchedEntry?.[1] || null;
 }
 
 function getRatingStars(rating) {
@@ -79,29 +112,21 @@ function getRatingStars(rating) {
 
 export default function SoftwareDirectory() {
   const [software, setSoftware] = useState([]);
-
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All Categories");
   const [pricing, setPricing] = useState("All Pricing");
   const [businessSize, setBusinessSize] = useState("All Sizes");
   const [ratingFilter, setRatingFilter] = useState("All Ratings");
-
   const [sortBy, setSortBy] = useState("popular");
-
   const [selectedSoftware, setSelectedSoftware] = useState([]);
   const [favorites, setFavorites] = useState([]);
-
   const [page, setPage] = useState(1);
-
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  /*
-  |--------------------------------------------------------------------------
-  | LOAD SOFTWARE
-  |--------------------------------------------------------------------------
-  */
-
+  // LOAD SOFTWARE
   useEffect(() => {
     let cancelled = false;
 
@@ -144,41 +169,32 @@ export default function SoftwareDirectory() {
     };
   }, []);
 
-  /*
-  |--------------------------------------------------------------------------
-  | CATEGORY COUNTS
-  |--------------------------------------------------------------------------
-  */
-
+  // CATEGORY COUNTS
   const categoryCounts = useMemo(() => {
     const counts = {};
 
     software.forEach((item) => {
       const name = getCategory(item);
-
       counts[name] = (counts[name] || 0) + 1;
     });
 
     return counts;
   }, [software]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | FILTER
-  |--------------------------------------------------------------------------
-  */
+  const categories = Object.entries(categoryCounts);
+  const visibleCategories = showAllCategories
+    ? categories
+    : categories.slice(0, 6);
 
+  // FILTER AND SORT
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
 
     const result = software.filter((item) => {
-      const name = (item?.name || item?.title || "").toLowerCase();
-
+      const name = String(item?.name || item?.title || "").toLowerCase();
       const description = getDescription(item).toLowerCase();
-
-      const itemCategory = getCategory(item).toLowerCase();
-
-      const itemPricing = getPricingModel(item).toLowerCase();
+      const itemCategory = String(getCategory(item)).toLowerCase();
+      const itemPricing = String(getPricingModel(item)).toLowerCase();
 
       const itemBusinessSize = String(
         item?.business_size || item?.businessSize || item?.company_size || "",
@@ -206,17 +222,9 @@ export default function SoftwareDirectory() {
 
       let matchesRating = true;
 
-      if (ratingFilter === "4.5+") {
-        matchesRating = rating >= 4.5;
-      }
-
-      if (ratingFilter === "4.0+") {
-        matchesRating = rating >= 4;
-      }
-
-      if (ratingFilter === "3.5+") {
-        matchesRating = rating >= 3.5;
-      }
+      if (ratingFilter === "4.5+") matchesRating = rating >= 4.5;
+      if (ratingFilter === "4.0+") matchesRating = rating >= 4;
+      if (ratingFilter === "3.5+") matchesRating = rating >= 3.5;
 
       return (
         matchesSearch &&
@@ -226,12 +234,6 @@ export default function SoftwareDirectory() {
         matchesRating
       );
     });
-
-    /*
-    |--------------------------------------------------------------------------
-    | SORT
-    |--------------------------------------------------------------------------
-    */
 
     if (sortBy === "rating") {
       result.sort((a, b) => getRating(b) - getRating(a));
@@ -252,29 +254,19 @@ export default function SoftwareDirectory() {
     return result;
   }, [software, query, category, pricing, businessSize, ratingFilter, sortBy]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | PAGINATION
-  |--------------------------------------------------------------------------
-  */
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // PAGINATION
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
 
   const paginatedSoftware = filtered.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE,
+    (page - 1) * pageSize,
+    page * pageSize,
   );
 
   useEffect(() => {
     setPage(1);
-  }, [query, category, pricing, businessSize, ratingFilter, sortBy]);
+  }, [query, category, pricing, businessSize, ratingFilter, sortBy, pageSize]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | ACTIONS
-  |--------------------------------------------------------------------------
-  */
-
+  // ACTIONS
   function toggleCompare(id) {
     setSelectedSoftware((current) => {
       if (current.includes(id)) {
@@ -290,13 +282,11 @@ export default function SoftwareDirectory() {
   }
 
   function toggleFavorite(id) {
-    setFavorites((current) => {
-      if (current.includes(id)) {
-        return current.filter((itemId) => itemId !== id);
-      }
-
-      return [...current, id];
-    });
+    setFavorites((current) =>
+      current.includes(id)
+        ? current.filter((itemId) => itemId !== id)
+        : [...current, id],
+    );
   }
 
   function clearFilters() {
@@ -317,37 +307,22 @@ export default function SoftwareDirectory() {
     });
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | RENDER
-  |--------------------------------------------------------------------------
-  */
-
   return (
     <PublicLayout>
       <main className="software-directory">
-        {/* =====================================================
-            BREADCRUMB
-        ====================================================== */}
-
+        {/* BREADCRUMB */}
         <div className="directory-breadcrumb">
           <button type="button" onClick={() => navigate("/")}>
             Home
           </button>
-
           <span>/</span>
-
           <span>Software</span>
         </div>
 
-        {/* =====================================================
-            PAGE HEADER
-        ====================================================== */}
-
+        {/* PAGE HEADER */}
         <section className="directory-header">
           <div>
             <h1>All Software</h1>
-
             <p>
               Discover {software.length.toLocaleString()}+ software solutions to
               grow your business
@@ -358,19 +333,14 @@ export default function SoftwareDirectory() {
             <div className="art-circle">
               <Icon name="search" />
             </div>
-
             <div className="art-small-card">
               <Icon name="check" />
             </div>
-
             <div className="art-small-dot" />
           </div>
         </section>
 
-        {/* =====================================================
-            SEARCH + SORT
-        ====================================================== */}
-
+        {/* SEARCH AND SORT */}
         <section className="directory-toolbar">
           <div className="directory-search">
             <Icon name="search" />
@@ -393,33 +363,30 @@ export default function SoftwareDirectory() {
               </button>
             )}
 
-            <button type="button" className="search-button">
+            <button
+              type="button"
+              className="search-button"
+              aria-label="Search software"
+            >
               <Icon name="search" />
             </button>
           </div>
 
           <div className="sort-control">
             <span>Sort by</span>
-
             <select
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value)}
             >
               <option value="popular">Most Popular</option>
-
               <option value="rating">Highest Rated</option>
-
               <option value="reviews">Most Reviewed</option>
-
               <option value="name">Name A-Z</option>
             </select>
           </div>
         </section>
 
-        {/* =====================================================
-            ACTIVE FILTERS
-        ====================================================== */}
-
+        {/* ACTIVE FILTERS */}
         <div className="active-filters">
           {pricing !== "All Pricing" && (
             <button
@@ -427,8 +394,7 @@ export default function SoftwareDirectory() {
               className="filter-chip"
               onClick={() => setPricing("All Pricing")}
             >
-              Pricing: {pricing}
-              <span>×</span>
+              Pricing: {pricing} <span>×</span>
             </button>
           )}
 
@@ -438,8 +404,7 @@ export default function SoftwareDirectory() {
               className="filter-chip"
               onClick={() => setBusinessSize("All Sizes")}
             >
-              Business Size: {businessSize}
-              <span>×</span>
+              Business Size: {businessSize} <span>×</span>
             </button>
           )}
 
@@ -449,8 +414,7 @@ export default function SoftwareDirectory() {
               className="filter-chip"
               onClick={() => setCategory("All Categories")}
             >
-              {category}
-              <span>×</span>
+              {category} <span>×</span>
             </button>
           )}
 
@@ -460,8 +424,7 @@ export default function SoftwareDirectory() {
               className="filter-chip"
               onClick={() => setRatingFilter("All Ratings")}
             >
-              Rating: {ratingFilter}
-              <span>×</span>
+              Rating: {ratingFilter} <span>×</span>
             </button>
           )}
 
@@ -476,30 +439,21 @@ export default function SoftwareDirectory() {
           )}
         </div>
 
-        {/* =====================================================
-            MAIN CONTENT
-        ====================================================== */}
-
+        {/* MAIN CONTENT */}
         <div className="directory-content">
-          {/* ===================================================
-              SIDEBAR
-          ==================================================== */}
-
+          {/* SIDEBAR */}
           <aside className="directory-sidebar">
             <div className="sidebar-title">
               <strong>Filters</strong>
-
               <button type="button" onClick={clearFilters}>
                 Clear all
               </button>
             </div>
 
             {/* CATEGORIES */}
-
             <div className="filter-section">
               <div className="filter-section-title">
                 <span>Categories</span>
-
                 <span className="collapse-icon">⌃</span>
               </div>
 
@@ -509,41 +463,37 @@ export default function SoftwareDirectory() {
                   checked={category === "All Categories"}
                   onChange={() => setCategory("All Categories")}
                 />
-
                 <span>All Categories</span>
-
                 <small>{software.length}</small>
               </label>
 
-              {Object.entries(categoryCounts)
-                .slice(0, 6)
-                .map(([name, count]) => (
-                  <label className="checkbox-row" key={name}>
-                    <input
-                      type="checkbox"
-                      checked={category.toLowerCase() === name.toLowerCase()}
-                      onChange={() => setCategory(name)}
-                    />
+              {visibleCategories.map(([name, count]) => (
+                <label className="checkbox-row" key={name}>
+                  <input
+                    type="checkbox"
+                    checked={category.toLowerCase() === name.toLowerCase()}
+                    onChange={() => setCategory(name)}
+                  />
+                  <span>{name}</span>
+                  <small>{count}</small>
+                </label>
+              ))}
 
-                    <span>{name}</span>
-
-                    <small>{count}</small>
-                  </label>
-                ))}
-
-              {Object.keys(categoryCounts).length > 6 && (
-                <button type="button" className="show-more">
-                  Show more⌄
+              {categories.length > 6 && (
+                <button
+                  type="button"
+                  className="show-more"
+                  onClick={() => setShowAllCategories((current) => !current)}
+                >
+                  {showAllCategories ? "Show less⌃" : "Show more⌄"}
                 </button>
               )}
             </div>
 
             {/* PRICING */}
-
             <div className="filter-section">
               <div className="filter-section-title">
                 <span>Pricing Model</span>
-
                 <span className="collapse-icon">⌃</span>
               </div>
 
@@ -561,18 +511,15 @@ export default function SoftwareDirectory() {
                     checked={pricing === item}
                     onChange={() => setPricing(item)}
                   />
-
                   <span>{item}</span>
                 </label>
               ))}
             </div>
 
             {/* BUSINESS SIZE */}
-
             <div className="filter-section">
               <div className="filter-section-title">
                 <span>Business Size</span>
-
                 <span className="collapse-icon">⌃</span>
               </div>
 
@@ -589,18 +536,15 @@ export default function SoftwareDirectory() {
                     checked={businessSize === item}
                     onChange={() => setBusinessSize(item)}
                   />
-
                   <span>{item}</span>
                 </label>
               ))}
             </div>
 
             {/* RATING */}
-
             <div className="filter-section">
               <div className="filter-section-title">
                 <span>Rating</span>
-
                 <span className="collapse-icon">⌃</span>
               </div>
 
@@ -613,21 +557,20 @@ export default function SoftwareDirectory() {
                   <input
                     type="checkbox"
                     checked={ratingFilter === value}
-                    onChange={() => setRatingFilter(value)}
+                    onChange={() =>
+                      setRatingFilter((current) =>
+                        current === value ? "All Ratings" : value,
+                      )
+                    }
                   />
-
                   <span className="mini-stars">★★★★★</span>
-
                   <span>{label}</span>
                 </label>
               ))}
             </div>
           </aside>
 
-          {/* ===================================================
-              RESULTS
-          ==================================================== */}
-
+          {/* RESULTS */}
           <section className="directory-results">
             <div className="results-top">
               <div>
@@ -639,7 +582,6 @@ export default function SoftwareDirectory() {
                 <button type="button" className="view-button active">
                   ▦ Grid
                 </button>
-
                 <button type="button" className="view-button">
                   ☷ List
                 </button>
@@ -647,13 +589,11 @@ export default function SoftwareDirectory() {
             </div>
 
             {/* LOADING */}
-
             {loading && (
               <div className="directory-loading">
                 {Array.from({ length: 5 }).map((_, index) => (
                   <div className="software-skeleton" key={index}>
                     <div className="skeleton-logo" />
-
                     <div className="skeleton-content">
                       <div className="skeleton-line large" />
                       <div className="skeleton-line medium" />
@@ -665,15 +605,11 @@ export default function SoftwareDirectory() {
             )}
 
             {/* ERROR */}
-
             {!loading && error && (
               <div className="directory-empty">
                 <div className="empty-icon">!</div>
-
                 <h3>Unable to load software</h3>
-
                 <p>{error}</p>
-
                 <button
                   type="button"
                   className="primary-button"
@@ -684,18 +620,17 @@ export default function SoftwareDirectory() {
               </div>
             )}
 
-            {/* RESULTS */}
-
+            {/* SOFTWARE CARDS */}
             {!loading &&
               !error &&
-              paginatedSoftware.map((item, index) => {
+              paginatedSoftware.map((item) => {
                 const id = item.id;
                 const name = item?.name || item?.title || "Unnamed Software";
 
                 const rating = getRating(item);
                 const reviews = getReviews(item);
                 const price = getPrice(item);
-                const logo = getLogo(item);
+                const logo = getSoftwareLogo(name);
 
                 const tags =
                   item?.features
@@ -705,18 +640,14 @@ export default function SoftwareDirectory() {
                     )
                     ?.filter(Boolean) || [];
 
-                const fallbackTags = [
-                  getCategory(item),
-                  "Business Software",
-                  "Productivity",
-                ];
-
-                const finalTags = tags.length > 0 ? tags : fallbackTags;
+                const finalTags =
+                  tags.length > 0
+                    ? tags
+                    : [getCategory(item), "Business Software", "Productivity"];
 
                 return (
                   <article className="software-list-card" key={id}>
-                    {/* LOGO */}
-
+                    {/* IMPORTED IMAGE LOGO */}
                     <div className="software-logo">
                       {logo ? (
                         <img
@@ -724,8 +655,7 @@ export default function SoftwareDirectory() {
                           alt={`${name} logo`}
                           onError={(event) => {
                             event.currentTarget.style.display = "none";
-
-                            event.currentTarget.nextSibling.style.display =
+                            event.currentTarget.nextElementSibling.style.display =
                               "flex";
                           }}
                         />
@@ -741,12 +671,10 @@ export default function SoftwareDirectory() {
                       </span>
                     </div>
 
-                    {/* MAIN INFO */}
-
+                    {/* SOFTWARE INFO */}
                     <div className="software-info">
                       <div className="software-title-row">
                         <h2>{name}</h2>
-
                         {item?.badge && (
                           <span className="software-badge">{item.badge}</span>
                         )}
@@ -754,9 +682,7 @@ export default function SoftwareDirectory() {
 
                       <div className="software-rating">
                         <span className="stars">{getRatingStars(rating)}</span>
-
                         <strong>{rating ? rating.toFixed(1) : "—"}</strong>
-
                         <span className="review-count">
                           ({reviews.toLocaleString()} reviews)
                         </span>
@@ -767,10 +693,9 @@ export default function SoftwareDirectory() {
                       </p>
 
                       <div className="software-tags">
-                        {finalTags.slice(0, 3).map((tag) => (
-                          <span key={tag}>{tag}</span>
+                        {finalTags.slice(0, 3).map((tag, index) => (
+                          <span key={`${tag}-${index}`}>{tag}</span>
                         ))}
-
                         {finalTags.length > 3 && (
                           <span>+{finalTags.length - 3}</span>
                         )}
@@ -778,23 +703,23 @@ export default function SoftwareDirectory() {
                     </div>
 
                     {/* PRICE */}
-
                     <div className="software-price">
                       <span>Starting from</span>
-
                       <strong>{formatPrice(price)}</strong>
-
                       <small>/user / month</small>
                     </div>
 
                     {/* ACTIONS */}
-
                     <div className="software-actions">
                       <button
                         type="button"
                         className="favorite-button"
                         onClick={() => toggleFavorite(id)}
-                        aria-label="Favorite"
+                        aria-label={
+                          favorites.includes(id)
+                            ? "Remove from favorites"
+                            : "Add to favorites"
+                        }
                       >
                         {favorites.includes(id) ? "♥" : "♡"}
                       </button>
@@ -825,7 +750,6 @@ export default function SoftwareDirectory() {
                           checked={selectedSoftware.includes(id)}
                           onChange={() => toggleCompare(id)}
                         />
-
                         <span>Add to Compare</span>
                       </label>
                     </div>
@@ -833,18 +757,14 @@ export default function SoftwareDirectory() {
                 );
               })}
 
-            {/* EMPTY */}
-
+            {/* EMPTY RESULTS */}
             {!loading && !error && filtered.length === 0 && (
               <div className="directory-empty">
                 <div className="empty-icon">
                   <Icon name="search" />
                 </div>
-
                 <h3>No software found</h3>
-
                 <p>Try another keyword or adjust your filters.</p>
-
                 <button
                   type="button"
                   className="primary-button"
@@ -855,16 +775,14 @@ export default function SoftwareDirectory() {
               </div>
             )}
 
-            {/* =================================================
-                PAGINATION
-            ================================================== */}
-
+            {/* PAGINATION */}
             {!loading && !error && filtered.length > 0 && (
               <div className="pagination">
                 <button
                   type="button"
                   disabled={page === 1}
                   onClick={() => goToPage(page - 1)}
+                  aria-label="Previous page"
                 >
                   ‹
                 </button>
@@ -886,7 +804,6 @@ export default function SoftwareDirectory() {
                 {totalPages > 5 && (
                   <>
                     <span>...</span>
-
                     <button type="button" onClick={() => goToPage(totalPages)}>
                       {totalPages}
                     </button>
@@ -897,16 +814,22 @@ export default function SoftwareDirectory() {
                   type="button"
                   disabled={page === totalPages}
                   onClick={() => goToPage(page + 1)}
+                  aria-label="Next page"
                 >
                   ›
                 </button>
 
                 <div className="page-size">
                   Show
-                  <select defaultValue="5">
-                    <option value="5">5</option>
-                    <option value="10">10</option>
-                    <option value="20">20</option>
+                  <select
+                    value={pageSize}
+                    onChange={(event) =>
+                      setPageSize(Number(event.target.value))
+                    }
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
                   </select>
                   per page
                 </div>
@@ -915,16 +838,12 @@ export default function SoftwareDirectory() {
           </section>
         </div>
 
-        {/* =====================================================
-            MOBILE COMPARE BAR
-        ====================================================== */}
-
+        {/* MOBILE COMPARE BAR */}
         {selectedSoftware.length > 0 && (
           <div className="compare-floating">
             <div>
               <strong>{selectedSoftware.length}</strong> software selected
             </div>
-
             <button type="button" onClick={() => navigate("/compare")}>
               Compare ({selectedSoftware.length})
             </button>

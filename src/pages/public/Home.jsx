@@ -1,111 +1,166 @@
 import PublicLayout from "../../layouts/PublicLayout";
+
 import Icon from "../../components/common/Icon";
+
 import { software } from "../../data/software";
+
 import { navigate } from "../../utils/helpers";
 
 import tokopediaLogo from "../../assets/images/tokopedia.png";
+
 import bukalapakLogo from "../../assets/images/bukalapak.png";
+
 import travelokaLogo from "../../assets/images/traveloka.webp";
+
 import ruangguruLogo from "../../assets/images/ruangguru.png";
+
 import jntLogo from "../../assets/images/jnt-express.png";
+
 import sociollaLogo from "../../assets/images/sociolla.webp";
+
 import mekariLogo from "../../assets/images/mekari.png";
+
 import bcaLogo from "../../assets/images/bca.png";
 
 import zohoLogo from "../../assets/logos/zoho.svg";
+
 import hubspotLogo from "../../assets/logos/hubspot.png";
+
 import salesforceLogo from "../../assets/logos/salesforces.png";
+
 import odooLogo from "../../assets/logos/odoo.png";
+
 import dynamicsLogo from "../../assets/logos/dynamics.png";
+
 import bamboohrLogo from "../../assets/logos/bamboo.png";
+
+import comparisonImage from "../../assets/logos/comparison.png";
+import recommendedImage from "../../assets/logos/recommended.png";
+import reviewRateImage from "../../assets/logos/review-rate.png";
+import softwareLogoImage from "../../assets/logos/software_logo.png";
 
 import "../../styles/home.css";
 
 const categories = [
   {
     name: "CRM",
+
     count: "124 Software",
+
     icon: "users",
   },
+
   {
     name: "ERP",
+
     count: "98 Software",
+
     icon: "layers",
   },
+
   {
     name: "Accounting",
+
     count: "86 Software",
+
     icon: "wallet",
   },
+
   {
     name: "HR Software",
+
     count: "72 Software",
+
     icon: "users",
   },
+
   {
     name: "Marketing",
+
     count: "66 Software",
+
     icon: "megaphone",
   },
+
   {
     name: "Project Management",
+
     count: "58 Software",
+
     icon: "clipboard",
   },
+
   {
     name: "Help Desk",
+
     count: "45 Software",
+
     icon: "headphones",
   },
 ];
 
 const popularSearches = [
   "CRM",
+
   "Accounting",
+
   "ERP",
+
   "HR Software",
+
   "Project Management",
 ];
 
 const recommendations = [
   {
     rank: 1,
+
     name: "Zoho CRM",
+
     rating: "4.6",
+
     logo: zohoLogo,
   },
+
   {
     rank: 2,
+
     name: "HubSpot CRM",
+
     rating: "4.5",
+
     logo: hubspotLogo,
   },
+
   {
     rank: 3,
+
     name: "Salesforce Sales Cloud",
+
     rating: "4.4",
+
     logo: salesforceLogo,
   },
 ];
 
 const features = [
   {
-    icon: "box",
-    title: "1000+ Software",
+    image: softwareLogoImage,
+    title: "10,000+ Software",
     description: "Explore verified business software across all categories.",
   },
   {
-    icon: "scale",
+    image: comparisonImage,
     title: "Compare Easily",
     description: "Compare features, pricing, and reviews side by side.",
   },
   {
-    icon: "sparkles",
+    image: recommendedImage,
     title: "Smart Recommendation",
     description: "Get AI-powered recommendations based on your business needs.",
   },
   {
-    icon: "shield",
+    image: reviewRateImage,
     title: "Trusted Reviews",
     description: "Real user reviews to help you make confident decisions.",
   },
@@ -114,92 +169,145 @@ const features = [
 const fallbackSoftware = [
   {
     id: 1,
+
     name: "Zoho CRM",
+
     category: "CRM",
+
     rating: 4.6,
+
     reviews_count: 1240,
+
     pricing: "$14 / user / month",
+
     logo: zohoLogo,
   },
+
   {
     id: 2,
+
     name: "HubSpot CRM",
+
     category: "CRM",
+
     rating: 4.5,
+
     reviews_count: 1080,
+
     pricing: "$15 / user / month",
+
     logo: hubspotLogo,
   },
+
   {
     id: 3,
+
     name: "Salesforce",
+
     category: "CRM",
+
     rating: 4.4,
+
     reviews_count: 980,
+
     pricing: "$25 / user / month",
+
     logo: salesforceLogo,
   },
+
   {
     id: 4,
+
     name: "Odoo ERP",
+
     category: "ERP",
+
     rating: 4.3,
+
     reviews_count: 760,
+
     pricing: "$24.90 / user / month",
+
     logo: odooLogo,
   },
+
   {
     id: 5,
+
     name: "Microsoft Dynamics 365",
+
     category: "ERP",
+
     rating: 4.6,
+
     reviews_count: 890,
+
     pricing: "$6 / user / month",
+
     logo: dynamicsLogo,
   },
 ];
 
 /* =========================================================
+
    TRUSTED BUSINESSES
+
    ========================================================= */
 
 const trustedBusinesses = [
   {
     name: "Tokopedia",
+
     logo: tokopediaLogo,
   },
+
   {
     name: "Bukalapak",
+
     logo: bukalapakLogo,
   },
+
   {
     name: "Traveloka",
+
     logo: travelokaLogo,
   },
+
   {
     name: "Ruangguru",
+
     logo: ruangguruLogo,
   },
+
   {
     name: "J&T Express",
+
     logo: jntLogo,
   },
+
   {
     name: "Sociolla",
+
     logo: sociollaLogo,
   },
+
   {
     name: "Mekari",
+
     logo: mekariLogo,
   },
+
   {
     name: "BCA",
+
     logo: bcaLogo,
   },
 ];
 
 /* =========================================================
+
    SOFTWARE HELPERS
+
    ========================================================= */
 
 function getSoftwareLogo(item, index) {
@@ -209,10 +317,15 @@ function getSoftwareLogo(item, index) {
 
   const logos = [
     zohoLogo,
+
     hubspotLogo,
+
     salesforceLogo,
+
     odooLogo,
+
     dynamicsLogo,
+
     bamboohrLogo,
   ];
 
@@ -288,7 +401,9 @@ function getPricing(item) {
 }
 
 /* =========================================================
+
    RATING
+
    ========================================================= */
 
 function RatingStars({ rating }) {
@@ -302,7 +417,9 @@ function RatingStars({ rating }) {
 }
 
 /* =========================================================
+
    HOME
+
    ========================================================= */
 
 export default function Home() {
@@ -313,7 +430,9 @@ export default function Home() {
     <PublicLayout>
       <main className="home-page">
         {/* =====================================================
+
             HERO
+
         ====================================================== */}
 
         <section className="home-hero">
@@ -331,7 +450,7 @@ export default function Home() {
 
               <p className="home-hero-description">
                 Discover, compare, and choose the right software with
-                confidence. 1000+ software, real reviews, and smart
+                confidence. 10,000+ software, real reviews, and smart
                 recommendations.
               </p>
 
@@ -382,6 +501,7 @@ export default function Home() {
 
                 <div>
                   <strong>95%</strong>
+
                   <span>Match Score</span>
                 </div>
               </div>
@@ -397,6 +517,7 @@ export default function Home() {
 
                 <span>
                   <strong>Compare</strong>
+
                   <small>Side by side</small>
                 </span>
               </button>
@@ -444,7 +565,8 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <strong>1000+</strong>
+                  <strong>10,000+</strong>
+
                   <span>Software</span>
                 </div>
               </div>
@@ -453,7 +575,9 @@ export default function Home() {
         </section>
 
         {/* =====================================================
+
             VALUE PROPOSITION
+
         ====================================================== */}
 
         <section className="home-features">
@@ -461,7 +585,12 @@ export default function Home() {
             {features.map((feature) => (
               <div className="home-feature" key={feature.title}>
                 <div className="home-feature-icon">
-                  <Icon name={feature.icon} />
+                  <img
+                    src={feature.image}
+                    alt=""
+                    className="home-feature-image"
+                    loading="lazy"
+                  />
                 </div>
 
                 <div className="home-feature-content">
@@ -475,7 +604,9 @@ export default function Home() {
         </section>
 
         {/* =====================================================
+
             CATEGORIES + POPULAR SOFTWARE
+
         ====================================================== */}
 
         <section className="home-content-section">
@@ -540,8 +671,11 @@ export default function Home() {
                 <div className="home-software-grid">
                   {popularSoftware.map((item, index) => {
                     const rating = getRating(item);
+
                     const reviews = getReviewCount(item);
+
                     const pricing = getPricing(item);
+
                     const logo = getSoftwareLogo(item, index);
 
                     return (
@@ -584,7 +718,9 @@ export default function Home() {
         </section>
 
         {/* =====================================================
+
             RECOMMENDATION CTA
+
         ====================================================== */}
 
         <section className="home-recommendation-cta">
@@ -596,13 +732,18 @@ export default function Home() {
                 <div className="home-cta-board">
                   <div className="home-cta-board-head">
                     <span>✓</span>
+
                     <span>✓</span>
+
                     <span>✓</span>
                   </div>
 
                   <div className="home-cta-line" />
+
                   <div className="home-cta-line short" />
+
                   <div className="home-cta-line" />
+
                   <div className="home-cta-line short" />
                 </div>
               </div>
@@ -621,6 +762,7 @@ export default function Home() {
                 onClick={() => navigate("/recommend")}
               >
                 <span>Get Recommendation</span>
+
                 <Icon name="arrow" />
               </button>
             </div>
@@ -628,7 +770,9 @@ export default function Home() {
         </section>
 
         {/* =====================================================
+
             TRUSTED BUSINESSES
+
         ====================================================== */}
 
         <section className="home-trusted">

@@ -1242,3 +1242,10 @@
     max-width: 60px;
   }
 }
+
+.home-feature-image {
+  width: 25px;
+  height: 25px;
+  display: block;
+  object-fit: contain;
+}
