@@ -23,7 +23,7 @@ export async function loginUser(payload) {
 /**
  * GET /me
  *
- * Get currently authenticated user.
+ * Get the currently authenticated user.
  */
 export async function getMe() {
   return api.get("/me");
@@ -32,9 +32,17 @@ export async function getMe() {
 /**
  * PATCH /me
  *
- * Update currently authenticated user's profile.
+ * Update the authenticated user's profile.
+ * Supports both JSON payloads and FormData avatar uploads.
  */
 export async function updateProfile(payload) {
+  if (payload instanceof FormData) {
+    // Laravel method spoofing supports multipart form submissions.
+    payload.set("_method", "PATCH");
+
+    return api.post("/me", payload);
+  }
+
   return api.patch("/me", payload);
 }
 

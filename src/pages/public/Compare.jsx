@@ -50,8 +50,14 @@ const navigationItems = [
 function normalizeSoftwareResponse(response) {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.data?.data)) return response.data.data;
+  if (Array.isArray(response?.data?.data)) {
+    return response.data.data;
+  }
   return [];
+}
+
+function getSoftwareId(item) {
+  return String(item?.id ?? "");
 }
 
 function getReviewCount(item) {
@@ -79,15 +85,27 @@ function formatRating(value) {
 }
 
 function getFeatures(item) {
-  return Array.isArray(item?.features) ? item.features : [];
+  if (!Array.isArray(item?.features)) return [];
+
+  return item.features.filter(
+    (feature) =>
+      feature && typeof feature === "object" && feature.is_active !== false,
+  );
 }
 
 function getIntegrations(item) {
-  return Array.isArray(item?.integrations)
-    ? item.integrations.filter(
-        (integration) => integration?.is_active !== false,
-      )
-    : [];
+  if (!Array.isArray(item?.integrations)) return [];
+
+  return item.integrations.filter(
+    (integration) => integration && integration.is_active !== false,
+  );
+}
+
+function normalizeFeatureValue(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 }
 
 function getFeatureKey(feature) {
@@ -96,11 +114,11 @@ function getFeatureKey(feature) {
   }
 
   if (feature?.slug) {
-    return `slug:${String(feature.slug).trim().toLowerCase()}`;
+    return `slug:${normalizeFeatureValue(feature.slug)}`;
   }
 
   if (feature?.name) {
-    return `name:${String(feature.name).trim().toLowerCase()}`;
+    return `name:${normalizeFeatureValue(feature.name)}`;
   }
 
   return "";
@@ -110,24 +128,15 @@ function getLogoForSoftware(item) {
   return item?.logo || softwareLogos[item?.name] || null;
 }
 
-function getSoftwareId(item) {
-  return String(item?.id ?? "");
-}
-
-// Gabungkan relasi tanpa membuang data katalog yang sudah tersedia.
-// Jika respons comparison mengirim array kosong, data katalog tetap dipakai.
 function mergeRelation(catalogItem, comparisonItem, relationName) {
-  const comparisonRelation = comparisonItem?.[relationName];
   const catalogRelation = catalogItem?.[relationName];
+  const comparisonRelation = comparisonItem?.[relationName];
 
-  if (
-    Array.isArray(comparisonRelation) &&
-    comparisonRelation.length > 0
-  ) {
+  if (Array.isArray(comparisonRelation) && comparisonRelation.length > 0) {
     return comparisonRelation;
   }
 
-  if (Array.isArray(catalogRelation)) {
+  if (Array.isArray(catalogRelation) && catalogRelation.length > 0) {
     return catalogRelation;
   }
 
@@ -135,7 +144,26 @@ function mergeRelation(catalogItem, comparisonItem, relationName) {
     return comparisonRelation;
   }
 
+  if (Array.isArray(catalogRelation)) {
+    return catalogRelation;
+  }
+
   return [];
+}
+
+function mergeSoftware(catalogItem, comparisonItem) {
+  const merged = {
+    ...catalogItem,
+    ...comparisonItem,
+  };
+
+  return {
+    ...merged,
+    features: mergeRelation(catalogItem, comparisonItem, "features"),
+    integrations: mergeRelation(catalogItem, comparisonItem, "integrations"),
+    logo:
+      catalogItem?.logo || comparisonItem?.logo || getLogoForSoftware(merged),
+  };
 }
 
 // =====================================================
@@ -157,7 +185,7 @@ function Compare() {
   const [saved, setSaved] = useState(false);
 
   // =====================================================
-  // LOAD SOFTWARE CATALOG
+  // LOAD CATALOG
   // =====================================================
 
   useEffect(() => {
@@ -171,17 +199,6 @@ function Compare() {
         const response = await getSoftware();
         const data = normalizeSoftwareResponse(response);
 
-        // Debug log: berada dalam scope yang benar.
-        console.log("CATALOG API:", data);
-        console.log(
-          "FEATURES FROM CATALOG:",
-          data.map((item) => ({
-            id: item.id,
-            name: item.name,
-            features: item.features,
-          })),
-        );
-
         if (cancelled) return;
 
         const availableSoftware = data
@@ -194,9 +211,7 @@ function Compare() {
         setSoftware(availableSoftware);
 
         setSelected((current) => {
-          const availableIds = new Set(
-            availableSoftware.map(getSoftwareId),
-          );
+          const availableIds = new Set(availableSoftware.map(getSoftwareId));
 
           const validSelected = current
             .filter((id) => availableIds.has(String(id)))
@@ -210,6 +225,15 @@ function Compare() {
             .slice(0, MAX_SOFTWARE)
             .map((item) => item.id);
         });
+
+        console.log(
+          "Software catalog features:",
+          availableSoftware.map((item) => ({
+            id: item.id,
+            name: item.name,
+            features: getFeatures(item),
+          })),
+        );
       } catch (err) {
         console.error("Failed to load software:", err);
 
@@ -231,7 +255,7 @@ function Compare() {
   }, []);
 
   // =====================================================
-  // MERGE CATALOG AND SAVED COMPARISON
+  // SELECTED SOFTWARE
   // =====================================================
 
   const chosen = useMemo(() => {
@@ -255,28 +279,7 @@ function Compare() {
 
         if (!catalogItem && !comparisonItem) return null;
 
-        const merged = {
-          ...catalogItem,
-          ...comparisonItem,
-          features: mergeRelation(
-            catalogItem,
-            comparisonItem,
-            "features",
-          ),
-          integrations: mergeRelation(
-            catalogItem,
-            comparisonItem,
-            "integrations",
-          ),
-        };
-
-        return {
-          ...merged,
-          logo:
-            catalogItem?.logo ||
-            comparisonItem?.logo ||
-            getLogoForSoftware(merged),
-        };
+        return mergeSoftware(catalogItem, comparisonItem);
       })
       .filter(Boolean);
   }, [software, selected, comparison]);
@@ -290,26 +293,46 @@ function Compare() {
 
     chosen.forEach((item) => {
       getFeatures(item).forEach((feature) => {
-        if (feature?.is_active === false) return;
-
         const key = getFeatureKey(feature);
 
-        if (key && !featureMap.has(key)) {
-          featureMap.set(key, feature);
+        if (!key) return;
+
+        if (!featureMap.has(key)) {
+          featureMap.set(key, {
+            key,
+            label: feature.name || "Unnamed feature",
+            description: feature.description || "",
+            aliases: new Set(),
+          });
+        }
+
+        const row = featureMap.get(key);
+
+        if (feature.name) {
+          row.aliases.add(normalizeFeatureValue(feature.name));
+        }
+
+        if (feature.slug) {
+          row.aliases.add(normalizeFeatureValue(feature.slug));
         }
       });
     });
 
-    return Array.from(featureMap.entries()).map(([key, feature]) => ({
-      key,
-      label: feature.name || "Unnamed feature",
-      description: feature.description || "",
+    return Array.from(featureMap.values()).map((row) => ({
+      key: row.key,
+      label: row.label,
+      description: row.description,
       values: chosen.map((item) => {
-        const exists = getFeatures(item).some(
-          (itemFeature) =>
-            itemFeature?.is_active !== false &&
-            getFeatureKey(itemFeature) === key,
-        );
+        const exists = getFeatures(item).some((feature) => {
+          const featureKey = getFeatureKey(feature);
+
+          if (featureKey === row.key) return true;
+
+          const name = normalizeFeatureValue(feature.name);
+          const slug = normalizeFeatureValue(feature.slug);
+
+          return row.aliases.has(name) || row.aliases.has(slug);
+        });
 
         return exists ? "yes" : "unknown";
       }),
@@ -317,7 +340,7 @@ function Compare() {
   }, [chosen]);
 
   // =====================================================
-  // RESET / SELECTION
+  // SELECTION ACTIONS
   // =====================================================
 
   const resetComparison = () => {
@@ -363,15 +386,14 @@ function Compare() {
     }
 
     const available = software.find(
-      (item) =>
-        !selected.some((id) => String(id) === String(item.id)),
+      (item) => !selected.some((id) => String(id) === String(item.id)),
     );
 
     if (available) toggle(available.id);
   };
 
   // =====================================================
-  // COMPARE API
+  // COMPARISON API
   // =====================================================
 
   const handleCompare = async () => {
@@ -397,20 +419,8 @@ function Compare() {
         );
       }
 
-      const savedComparison = response.data.comparison;
-
-      setComparison(savedComparison);
+      setComparison(response.data.comparison);
       setSaved(true);
-
-      console.log(
-        "Software comparison loaded:",
-        savedComparison.software?.map((item) => ({
-          id: item.id,
-          name: item.name,
-          features: item.features,
-          integrations: item.integrations,
-        })),
-      );
     } catch (err) {
       console.error("Failed to compare software:", err);
       setError(err?.message || "Failed to compare software.");
@@ -507,7 +517,7 @@ function Compare() {
           title="Feature is recorded for this software"
           aria-label="Feature recorded"
         >
-          <Check size={14} strokeWidth={2.5} />
+          <Check size={16} strokeWidth={2.5} />
         </span>
       );
     }
@@ -523,8 +533,44 @@ function Compare() {
     );
   };
 
+  const renderFeatureMatrix = (showDescription = true) => {
+    if (featureRows.length === 0) {
+      return (
+        <div className="matrix-row">
+          <div className="matrix-label-cell">Features</div>
+          <div
+            className="matrix-value-cell"
+            style={{ gridColumn: `span ${chosen.length}` }}
+          >
+            No feature data has been recorded in the catalog.
+          </div>
+        </div>
+      );
+    }
+
+    return featureRows.map((row) => (
+      <div className="matrix-row" key={row.key}>
+        <div className="matrix-label-cell">
+          <span>{row.label}</span>
+          {showDescription && row.description && (
+            <small>{row.description}</small>
+          )}
+        </div>
+
+        {row.values.map((status, index) => (
+          <div
+            className="matrix-value-cell feature-cell"
+            key={`${row.key}-${getSoftwareId(chosen[index])}`}
+          >
+            {renderFeatureStatus(status)}
+          </div>
+        ))}
+      </div>
+    ));
+  };
+
   // =====================================================
-  // LOADING
+  // LOADING AND ERROR
   // =====================================================
 
   if (loading) {
@@ -540,10 +586,6 @@ function Compare() {
       </PublicLayout>
     );
   }
-
-  // =====================================================
-  // ERROR
-  // =====================================================
 
   if (error && software.length === 0) {
     return (
@@ -603,7 +645,7 @@ function Compare() {
 
         <section className="selected-software-section">
           {chosen.map((item) => (
-            <div className="selected-software-card" key={item.id}>
+            <div className="selected-software-card" key={getSoftwareId(item)}>
               <div className="selected-software-logo">{getLogo(item)}</div>
 
               <div className="selected-software-info">
@@ -663,10 +705,7 @@ function Compare() {
               <div className="recommendation-card">
                 <h3>Not sure yet?</h3>
                 <p>Get a recommendation based on your business needs.</p>
-                <button
-                  type="button"
-                  onClick={() => navigate("/recommend")}
-                >
+                <button type="button" onClick={() => navigate("/recommend")}>
                   <Star size={13} />
                   Get Recommendation
                 </button>
@@ -709,17 +748,17 @@ function Compare() {
                     const reviewCount = getReviewCount(item);
 
                     return (
-                      <div className="product-column-header" key={item.id}>
+                      <div
+                        className="product-column-header"
+                        key={getSoftwareId(item)}
+                      >
                         <div className="product-heading">
                           <div className="matrix-logo">{getLogo(item)}</div>
+
                           <div>
                             <h3>{item.name}</h3>
                             <div className="matrix-rating">
-                              <Star
-                                size={11}
-                                fill="#f4a91b"
-                                color="#f4a91b"
-                              />
+                              <Star size={11} fill="#f4a91b" color="#f4a91b" />
                               <strong>{getRating(item)}</strong>
                               <span>
                                 {reviewCount === null
@@ -749,7 +788,10 @@ function Compare() {
                     <div className="matrix-row">
                       <div className="matrix-label-cell">Category</div>
                       {chosen.map((item) => (
-                        <div className="matrix-value-cell" key={item.id}>
+                        <div
+                          className="matrix-value-cell"
+                          key={getSoftwareId(item)}
+                        >
                           {item.category || "Not available"}
                         </div>
                       ))}
@@ -758,7 +800,10 @@ function Compare() {
                     <div className="matrix-row">
                       <div className="matrix-label-cell">Description</div>
                       {chosen.map((item) => (
-                        <div className="matrix-value-cell" key={item.id}>
+                        <div
+                          className="matrix-value-cell"
+                          key={getSoftwareId(item)}
+                        >
                           {item.description || "Not available"}
                         </div>
                       ))}
@@ -786,7 +831,7 @@ function Compare() {
                         return (
                           <div
                             className="matrix-value-cell overall-score-cell"
-                            key={item.id}
+                            key={getSoftwareId(item)}
                           >
                             {validRating ? (
                               <>
@@ -814,32 +859,7 @@ function Compare() {
                       <span>Feature Comparison</span>
                     </div>
 
-                    {featureRows.length > 0 ? (
-                      featureRows.map((row) => (
-                        <div className="matrix-row" key={row.key}>
-                          <div className="matrix-label-cell">{row.label}</div>
-
-                          {row.values.map((status, index) => (
-                            <div
-                              className="matrix-value-cell feature-cell"
-                              key={`${row.key}-${chosen[index].id}`}
-                            >
-                              {renderFeatureStatus(status)}
-                            </div>
-                          ))}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="matrix-row">
-                        <div className="matrix-label-cell">Features</div>
-                        <div
-                          className="matrix-value-cell"
-                          style={{ gridColumn: `span ${chosen.length}` }}
-                        >
-                          No feature data has been recorded yet.
-                        </div>
-                      </div>
-                    )}
+                    {renderFeatureMatrix(false)}
                   </>
                 )}
 
@@ -851,7 +871,7 @@ function Compare() {
                     {chosen.map((item) => (
                       <div
                         className="matrix-value-cell price-cell"
-                        key={item.id}
+                        key={getSoftwareId(item)}
                       >
                         <strong>{getPrice(item)}</strong>
                       </div>
@@ -867,39 +887,7 @@ function Compare() {
                       <span>Documented Features</span>
                     </div>
 
-                    {featureRows.length > 0 ? (
-                      featureRows.map((row) => (
-                        <div className="matrix-row" key={row.key}>
-                          <div className="matrix-label-cell">
-                            <span>{row.label}</span>
-                            {row.description && (
-                              <small>{row.description}</small>
-                            )}
-                          </div>
-
-                          {row.values.map((status, index) => (
-                            <div
-                              className="matrix-value-cell feature-cell"
-                              key={`${row.key}-${chosen[index].id}`}
-                            >
-                              {renderFeatureStatus(status)}
-                            </div>
-                          ))}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="matrix-row">
-                        <div className="matrix-label-cell">Features</div>
-                        <div
-                          className="matrix-value-cell"
-                          style={{ gridColumn: `span ${chosen.length}` }}
-                        >
-                          No feature data was returned by the software
-                          catalog. Check the GET /api/v1/software response
-                          to confirm that it includes a features array.
-                        </div>
-                      </div>
-                    )}
+                    {renderFeatureMatrix(true)}
                   </>
                 )}
 
@@ -918,7 +906,10 @@ function Compare() {
                         const integrations = getIntegrations(item);
 
                         return (
-                          <div className="matrix-value-cell" key={item.id}>
+                          <div
+                            className="matrix-value-cell"
+                            key={getSoftwareId(item)}
+                          >
                             {integrations.length > 0
                               ? integrations
                                   .map((integration) => integration.name)
@@ -943,7 +934,10 @@ function Compare() {
                     <div className="matrix-row">
                       <div className="matrix-label-cell">Average Rating</div>
                       {chosen.map((item) => (
-                        <div className="matrix-value-cell" key={item.id}>
+                        <div
+                          className="matrix-value-cell"
+                          key={getSoftwareId(item)}
+                        >
                           {getRating(item)}
                           {item.rating !== null &&
                             item.rating !== undefined &&
@@ -954,14 +948,15 @@ function Compare() {
                     </div>
 
                     <div className="matrix-row">
-                      <div className="matrix-label-cell">
-                        Number of Reviews
-                      </div>
+                      <div className="matrix-label-cell">Number of Reviews</div>
                       {chosen.map((item) => {
                         const count = getReviewCount(item);
 
                         return (
-                          <div className="matrix-value-cell" key={item.id}>
+                          <div
+                            className="matrix-value-cell"
+                            key={getSoftwareId(item)}
+                          >
                             {count === null ? "Not available" : count}
                           </div>
                         );
@@ -972,10 +967,9 @@ function Compare() {
               </div>
 
               <div className="comparison-footnote">
-                Comparison results are based on information currently
-                available in the database. A feature marked as not documented
-                should not be interpreted as a confirmed absence of that
-                feature.
+                Comparison results are based on information currently available
+                in the database. A feature marked as not documented should not
+                be interpreted as a confirmed absence of that feature.
               </div>
 
               {comparison?.id && (

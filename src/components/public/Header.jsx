@@ -5,6 +5,33 @@ import { ChevronDown, LogOut } from "lucide-react";
 import { useAuthContext } from "../../context/AuthContext";
 import softwareEmpire from "../../assets/images/software-empire.png";
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
+).replace(/\/+$/, "");
+
+function getAvatarUrl(avatar) {
+  if (typeof avatar !== "string" || !avatar.trim()) {
+    return null;
+  }
+
+  const value = avatar.trim();
+
+  // Full URL, data URL, or temporary blob URL.
+  if (/^(https?:\/\/|data:image\/|blob:)/i.test(value)) {
+    return value;
+  }
+
+  const path = value.replace(/^\/+/, "");
+
+  // Laravel public storage path.
+  if (path.startsWith("storage/")) {
+    return `${API_BASE_URL}/${path}`;
+  }
+
+  // Path saved relative to Laravel's public storage.
+  return `${API_BASE_URL}/storage/${path}`;
+}
+
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -12,19 +39,34 @@ export default function Header() {
   const { user, loading, isAuthenticated, logout } = useAuthContext();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+
   const mobileMenuRef = useRef(null);
 
-  const userName = user?.name || "";
+  const userName = user?.name?.trim() || "";
 
   const initials =
     userName
-      .trim()
       .split(/\s+/)
       .filter(Boolean)
-      .map((name) => name.charAt(0))
+      .map((part) => part.charAt(0))
       .join("")
       .slice(0, 2)
       .toUpperCase() || "U";
+
+  const avatarUrl = getAvatarUrl(user?.avatar);
+
+  // DEBUG: periksa data avatar di browser Console.
+  useEffect(() => {
+    console.log("[Header] User:", user);
+    console.log("[Header] Avatar field:", user?.avatar);
+    console.log("[Header] Avatar URL:", avatarUrl);
+  }, [user, avatarUrl]);
+
+  // Reset status error saat URL gambar berubah.
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [avatarUrl]);
 
   const handleLogout = async () => {
     try {
@@ -65,7 +107,7 @@ export default function Header() {
     navigate(path);
   };
 
-  // Close mobile menu when clicking outside
+  // Close mobile menu when clicking outside.
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -83,16 +125,14 @@ export default function Header() {
     };
   }, []);
 
-  // Close menu when route changes
+  // Close mobile menu when route changes.
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
   return (
     <header className="topbar">
-      {/* =====================================================
-          BRAND
-      ====================================================== */}
+      {/* BRAND */}
       <button
         type="button"
         className="brand"
@@ -106,9 +146,7 @@ export default function Header() {
         />
       </button>
 
-      {/* =====================================================
-          DESKTOP NAVIGATION
-      ====================================================== */}
+      {/* DESKTOP NAVIGATION */}
       <nav className="topnav desktop-nav" aria-label="Main navigation">
         <button
           type="button"
@@ -151,14 +189,12 @@ export default function Header() {
         </button>
       </nav>
 
-      {/* =====================================================
-          MOBILE MENU
-      ====================================================== */}
+      {/* MOBILE MENU */}
       <div className="mobile-nav-wrapper" ref={mobileMenuRef}>
         <button
           type="button"
           className={`mobile-menu-button ${mobileMenuOpen ? "active" : ""}`}
-          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          onClick={() => setMobileMenuOpen((previous) => !previous)}
           aria-expanded={mobileMenuOpen}
           aria-haspopup="true"
         >
@@ -211,18 +247,13 @@ export default function Header() {
         )}
       </div>
 
-      {/* =====================================================
-          ACTIONS
-      ====================================================== */}
+      {/* ACCOUNT ACTIONS */}
       <div className="header-actions">
-        {/* AUTH LOADING */}
         {loading && (
           <div className="header-auth-loading" aria-label="Loading account" />
         )}
 
-        {/* ===================================================
-            GUEST
-        ==================================================== */}
+        {/* GUEST */}
         {!loading && !isAuthenticated && (
           <div className="guest-actions">
             <button
@@ -243,9 +274,7 @@ export default function Header() {
           </div>
         )}
 
-        {/* ===================================================
-            AUTHENTICATED
-        ==================================================== */}
+        {/* AUTHENTICATED USER */}
         {!loading && isAuthenticated && (
           <div className="header-account">
             <button
@@ -255,7 +284,28 @@ export default function Header() {
               title="My Account"
               aria-label="Open my account"
             >
-              <span className="avatar">{initials}</span>
+              <span className="avatar">
+                {avatarUrl && !avatarLoadFailed ? (
+                  <img
+                    key={avatarUrl}
+                    src={avatarUrl}
+                    alt={`${userName || "User"} profile`}
+                    className="avatar-image"
+                    onLoad={() => {
+                      console.log("[Header] Avatar loaded:", avatarUrl);
+                    }}
+                    onError={() => {
+                      console.error(
+                        "[Header] Failed to load avatar:",
+                        avatarUrl,
+                      );
+                      setAvatarLoadFailed(true);
+                    }}
+                  />
+                ) : (
+                  initials
+                )}
+              </span>
 
               <span className="logged-user-info">
                 <strong>{userName || "My Account"}</strong>

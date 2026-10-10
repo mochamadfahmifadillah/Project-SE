@@ -22,7 +22,6 @@ const USER_KEY = "software_empire_user";
 function getStoredUser() {
   try {
     const stored = localStorage.getItem(USER_KEY);
-
     return stored ? JSON.parse(stored) : null;
   } catch (error) {
     console.error("Failed to read stored user:", error);
@@ -34,6 +33,11 @@ function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
+
 /*
 |--------------------------------------------------------------------------
 | Response Helpers
@@ -42,23 +46,60 @@ function getToken() {
 
 function extractToken(response) {
   return (
-    response?.token ||
-    response?.data?.token ||
-    response?.access_token ||
-    response?.data?.access_token ||
+    response?.token ??
+    response?.data?.token ??
+    response?.access_token ??
+    response?.data?.access_token ??
     null
   );
 }
 
+/**
+ * Mendukung beberapa format respons:
+ *
+ * { user: {...} }
+ * { data: { user: {...} } }
+ * { success: true, data: { user: {...} } }
+ *
+ * api.js menggunakan fetch dan mengembalikan JSON secara langsung.
+ */
 function extractUser(response) {
-  return response?.user || response?.data?.user || null;
+  if (!response || typeof response !== "object") {
+    return null;
+  }
+
+  if (
+    response.user &&
+    typeof response.user === "object" &&
+    !Array.isArray(response.user)
+  ) {
+    return response.user;
+  }
+
+  if (
+    response.data?.user &&
+    typeof response.data.user === "object" &&
+    !Array.isArray(response.data.user)
+  ) {
+    return response.data.user;
+  }
+
+  // Fallback jika endpoint langsung mengembalikan objek user.
+  if (
+    response.id !== undefined &&
+    (response.name !== undefined || response.email !== undefined)
+  ) {
+    return response;
+  }
+
+  return null;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Session Helpers
-|--------------------------------------------------------------------------
-*/
+function persistUser(user) {
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+}
 
 function persistSession(response) {
   const token = extractToken(response);
@@ -69,7 +110,7 @@ function persistSession(response) {
   }
 
   if (currentUser) {
-    localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+    persistUser(currentUser);
   }
 
   return {
@@ -78,41 +119,16 @@ function persistSession(response) {
   };
 }
 
-function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-}
-
 /*
 |--------------------------------------------------------------------------
 | RBAC Helpers
 |--------------------------------------------------------------------------
 */
 
-/**
- * Get all roles from authenticated user.
- *
- * Backend response:
- *
- * user: {
- *   roles: [
- *     {
- *       name: "admin",
- *       permissions: [...]
- *     }
- *   ]
- * }
- */
 function getUserRoles(user) {
   if (!user) {
     return [];
   }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Multiple roles
-  |--------------------------------------------------------------------------
-  */
 
   if (Array.isArray(user.roles)) {
     return user.roles
@@ -126,12 +142,6 @@ function getUserRoles(user) {
       .filter(Boolean);
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Single role fallback
-  |--------------------------------------------------------------------------
-  */
-
   if (typeof user.role === "string") {
     return [user.role];
   }
@@ -143,25 +153,12 @@ function getUserRoles(user) {
   return [];
 }
 
-/**
- * Get all permission names from authenticated user.
- *
- * Backend:
- *
- * user.roles[].permissions[]
- */
 function getUserPermissions(user) {
   if (!user) {
     return [];
   }
 
   const permissions = [];
-
-  /*
-  |--------------------------------------------------------------------------
-  | Direct permissions
-  |--------------------------------------------------------------------------
-  */
 
   if (Array.isArray(user.permissions)) {
     permissions.push(
@@ -172,12 +169,6 @@ function getUserPermissions(user) {
         .filter(Boolean),
     );
   }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Permissions from roles
-  |--------------------------------------------------------------------------
-  */
 
   if (Array.isArray(user.roles)) {
     user.roles.forEach((role) => {
@@ -195,12 +186,6 @@ function getUserPermissions(user) {
     });
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Single role fallback
-  |--------------------------------------------------------------------------
-  */
-
   if (Array.isArray(user.role?.permissions)) {
     permissions.push(
       ...user.role.permissions
@@ -210,12 +195,6 @@ function getUserPermissions(user) {
         .filter(Boolean),
     );
   }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Remove duplicates
-  |--------------------------------------------------------------------------
-  */
 
   return [...new Set(permissions)];
 }
@@ -232,7 +211,7 @@ export function AuthProvider({ children }) {
 
   /*
   |--------------------------------------------------------------------------
-  | Restore Session
+  | Restore Session From Backend
   |--------------------------------------------------------------------------
   */
 
@@ -241,12 +220,6 @@ export function AuthProvider({ children }) {
 
     async function restoreSession() {
       const token = getToken();
-
-      /*
-      |--------------------------------------------------------------------------
-      | No token
-      |--------------------------------------------------------------------------
-      */
 
       if (!token) {
         if (!cancelled) {
@@ -258,24 +231,16 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        /*
-        |--------------------------------------------------------------------------
-        | Get fresh authenticated user from backend
-        |--------------------------------------------------------------------------
-        */
-
         const response = await getCurrentUser();
-
         const currentUser = extractUser(response);
 
         if (!currentUser) {
-          throw new Error("Unable to restore authenticated user.");
+          throw new Error("Authenticated user was not returned by the API.");
         }
 
         if (!cancelled) {
           setUser(currentUser);
-
-          localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+          persistUser(currentUser);
         }
       } catch (error) {
         console.error("Session restore failed:", error);
@@ -306,14 +271,14 @@ export function AuthProvider({ children }) {
 
   const getMe = async () => {
     const response = await getCurrentUser();
-
     const currentUser = extractUser(response);
 
-    if (currentUser) {
-      setUser(currentUser);
-
-      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+    if (!currentUser) {
+      throw new Error("Unable to retrieve current user from the API.");
     }
+
+    setUser(currentUser);
+    persistUser(currentUser);
 
     return response;
   };
@@ -325,15 +290,35 @@ export function AuthProvider({ children }) {
   */
 
   const updateProfile = async (payload) => {
+    // Tunggu backend menyelesaikan request terlebih dahulu.
     const response = await updateUserProfile(payload);
 
-    const updatedUser = extractUser(response);
+    let updatedUser = extractUser(response);
 
-    if (updatedUser) {
-      setUser(updatedUser);
-
-      localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+    // Jika endpoint hanya mengembalikan pesan sukses,
+    // ambil user terbaru dari backend.
+    if (!updatedUser) {
+      const refreshedResponse = await getCurrentUser();
+      updatedUser = extractUser(refreshedResponse);
     }
+
+    if (!updatedUser) {
+      throw new Error("The API did not return the updated profile.");
+    }
+
+    // Pertahankan role dan permission jika tidak dikirim
+    // dalam respons update profil.
+    const nextUser = {
+      ...getStoredUser(),
+      ...user,
+      ...updatedUser,
+    };
+
+    // React Context diperbarui sehingga Header ikut render ulang.
+    setUser(nextUser);
+
+    // Cache lokal disinkronkan dengan respons terbaru.
+    persistUser(nextUser);
 
     return response;
   };
@@ -346,7 +331,6 @@ export function AuthProvider({ children }) {
 
   const login = async (credentials) => {
     const response = await loginUser(credentials);
-
     const { user: currentUser } = persistSession(response);
 
     if (currentUser) {
@@ -364,7 +348,6 @@ export function AuthProvider({ children }) {
 
   const register = async (payload) => {
     const response = await registerUser(payload);
-
     const { user: currentUser } = persistSession(response);
 
     if (currentUser) {
@@ -400,7 +383,6 @@ export function AuthProvider({ children }) {
   */
 
   const token = getToken();
-
   const isAuthenticated = Boolean(user && token);
 
   /*
@@ -409,44 +391,21 @@ export function AuthProvider({ children }) {
   |--------------------------------------------------------------------------
   */
 
-  const roles = getUserRoles(user);
+  const roles = useMemo(() => getUserRoles(user), [user]);
 
-  const permissions = getUserPermissions(user);
+  const permissions = useMemo(() => getUserPermissions(user), [user]);
 
   const role = roles[0] || null;
 
   /*
   |--------------------------------------------------------------------------
-  | Debug RBAC
-  |--------------------------------------------------------------------------
-  */
-
-  useEffect(() => {
-    if (!loading) {
-      console.log("🔐 AUTH STATE", {
-        isAuthenticated,
-        role,
-        roles,
-        permissions,
-        user,
-        token: Boolean(getToken()),
-      });
-    }
-  }, [loading, isAuthenticated, role, roles, permissions, user]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Has Role
+  | Authorization Helpers
   |--------------------------------------------------------------------------
   */
 
   const hasRole = (requiredRole) => {
     if (!requiredRole) {
       return true;
-    }
-
-    if (!roles.length) {
-      return false;
     }
 
     if (Array.isArray(requiredRole)) {
@@ -456,53 +415,16 @@ export function AuthProvider({ children }) {
     return roles.includes(requiredRole);
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Has Permission
-  |--------------------------------------------------------------------------
-  */
-
   const hasPermission = (requiredPermission) => {
-    /*
-    |--------------------------------------------------------------------------
-    | No permission requirement
-    |--------------------------------------------------------------------------
-    */
-
     if (!requiredPermission) {
       return true;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | User has no permissions
-    |--------------------------------------------------------------------------
-    */
-
-    if (!permissions.length) {
-      return false;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Multiple permissions
-    |--------------------------------------------------------------------------
-    |
-    | Semua permission harus dimiliki.
-    |
-    */
 
     if (Array.isArray(requiredPermission)) {
       return requiredPermission.every((permission) =>
         permissions.includes(permission),
       );
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Single permission
-    |--------------------------------------------------------------------------
-    */
 
     return permissions.includes(requiredPermission);
   };
@@ -516,31 +438,18 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       user,
-
       loading,
-
       token,
-
       isAuthenticated,
-
       role,
-
       roles,
-
       permissions,
-
       hasRole,
-
       hasPermission,
-
       getMe,
-
       updateProfile,
-
       login,
-
       register,
-
       logout,
     }),
     [user, loading, token, isAuthenticated, role, roles, permissions],
