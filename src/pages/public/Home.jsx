@@ -24,7 +24,7 @@ import bcaLogo from "../../assets/images/bca.png";
 
 import zohoLogo from "../../assets/logos/zoho.svg";
 
-import hubspotLogo from "../../assets/logos/hubspot.png";
+import hubspotLogo from "../../assets/logos/Hubspot.png";
 
 import salesforceLogo from "../../assets/logos/salesforces.png";
 
