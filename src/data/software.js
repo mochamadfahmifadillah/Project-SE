@@ -1,5 +1,5 @@
 import zohoLogo from "../assets/logos/zoho.svg";
-import hubspotLogo from "../assets/logos/hubspot.png";
+import hubspotLogo from "../assets/logos/Hubspot.png";
 import salesforceLogo from "../assets/logos/salesforces.png";
 import odooLogo from "../assets/logos/odoo.png";
 import dynamicsLogo from "../assets/logos/dynamics.png";
