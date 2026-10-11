@@ -6,8 +6,11 @@ import { useAuthContext } from "../../context/AuthContext";
 import softwareEmpire from "../../assets/images/software-empire.png";
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://software-empire-backend.vercel.app/api/v1"
 ).replace(/\/+$/, "");
+
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1\/?$/i, "");
 
 function getAvatarUrl(avatar) {
   if (typeof avatar !== "string" || !avatar.trim()) {
@@ -16,20 +19,25 @@ function getAvatarUrl(avatar) {
 
   const value = avatar.trim();
 
-  // Full URL, data URL, or temporary blob URL.
-  if (/^(https?:\/\/|data:image\/|blob:)/i.test(value)) {
+  // URL lengkap dari server atau layanan penyimpanan gambar.
+  if (/^https?:\/\//i.test(value)) {
     return value;
   }
 
-  const path = value.replace(/^\/+/, "");
+  // Mendukung path relatif seperti:
+  // avatars/profile.png
+  // storage/avatars/profile.png
+  // api/v1/storage/avatars/profile.png
+  const path = value
+    .replace(/^\/+/, "")
+    .replace(/^api\/v1\//i, "")
+    .replace(/^storage\//i, "");
 
-  // Laravel public storage path.
-  if (path.startsWith("storage/")) {
-    return `${API_BASE_URL}/${path}`;
+  if (!path || path.includes("..")) {
+    return null;
   }
 
-  // Path saved relative to Laravel's public storage.
-  return `${API_BASE_URL}/storage/${path}`;
+  return `${API_ORIGIN}/storage/${path}`;
 }
 
 export default function Header() {
@@ -43,7 +51,7 @@ export default function Header() {
 
   const mobileMenuRef = useRef(null);
 
-  const userName = user?.name?.trim() || "";
+  const userName = typeof user?.name === "string" ? user.name.trim() : "";
 
   const initials =
     userName
@@ -54,16 +62,18 @@ export default function Header() {
       .slice(0, 2)
       .toUpperCase() || "U";
 
-  const avatarUrl = getAvatarUrl(user?.avatar);
+  // Menangani beberapa nama field yang umum digunakan API.
+  const avatarValue =
+    user?.avatar_url ??
+    user?.avatar ??
+    user?.profile_photo_url ??
+    user?.profile_photo ??
+    user?.photo_url ??
+    null;
 
-  // DEBUG: periksa data avatar di browser Console.
-  useEffect(() => {
-    console.log("[Header] User:", user);
-    console.log("[Header] Avatar field:", user?.avatar);
-    console.log("[Header] Avatar URL:", avatarUrl);
-  }, [user, avatarUrl]);
+  const avatarUrl = getAvatarUrl(avatarValue);
 
-  // Reset status error saat URL gambar berubah.
+  // Reset fallback ketika avatar pengguna berubah.
   useEffect(() => {
     setAvatarLoadFailed(false);
   }, [avatarUrl]);
@@ -78,24 +88,15 @@ export default function Header() {
   };
 
   const isActive = (path) => {
-    if (path === "/software") {
+    if (path === "/software" || path === "/learn") {
       return (
-        location.pathname === "/software" ||
-        location.pathname.startsWith("/software/")
-      );
-    }
-
-    if (path === "/learn") {
-      return (
-        location.pathname === "/learn" ||
-        location.pathname.startsWith("/learn/")
+        location.pathname === path || location.pathname.startsWith(`${path}/`)
       );
     }
 
     if (path === "/admin/vendors") {
       return (
-        location.pathname === "/admin/vendors" ||
-        location.pathname.startsWith("/admin/vendors/")
+        location.pathname === path || location.pathname.startsWith(`${path}/`)
       );
     }
 
@@ -107,7 +108,7 @@ export default function Header() {
     navigate(path);
   };
 
-  // Close mobile menu when clicking outside.
+  // Tutup menu mobile ketika klik di luar menu.
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -119,16 +120,62 @@ export default function Header() {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
     };
   }, []);
 
-  // Close mobile menu when route changes.
+  // Tutup menu mobile ketika berpindah halaman.
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  const renderNavigationItems = () => (
+    <>
+      <button
+        type="button"
+        className={isActive("/software") ? "active" : ""}
+        onClick={() => handleNavigation("/software")}
+      >
+        Software
+      </button>
+
+      <button
+        type="button"
+        className={isActive("/compare") ? "active" : ""}
+        onClick={() => handleNavigation("/compare")}
+      >
+        Compare
+      </button>
+
+      <button
+        type="button"
+        className={isActive("/recommend") ? "active" : ""}
+        onClick={() => handleNavigation("/recommend")}
+      >
+        Find My Software
+      </button>
+
+      <button
+        type="button"
+        className={isActive("/learn") ? "active" : ""}
+        onClick={() => handleNavigation("/learn")}
+      >
+        Learn
+      </button>
+
+      <button
+        type="button"
+        className={isActive("/admin/vendors") ? "active" : ""}
+        onClick={() => handleNavigation("/admin/vendors")}
+      >
+        For Vendors
+      </button>
+    </>
+  );
 
   return (
     <header className="topbar">
@@ -148,45 +195,7 @@ export default function Header() {
 
       {/* DESKTOP NAVIGATION */}
       <nav className="topnav desktop-nav" aria-label="Main navigation">
-        <button
-          type="button"
-          className={isActive("/software") ? "active" : ""}
-          onClick={() => navigate("/software")}
-        >
-          Software
-        </button>
-
-        <button
-          type="button"
-          className={isActive("/compare") ? "active" : ""}
-          onClick={() => navigate("/compare")}
-        >
-          Compare
-        </button>
-
-        <button
-          type="button"
-          className={isActive("/recommend") ? "active" : ""}
-          onClick={() => navigate("/recommend")}
-        >
-          Find My Software
-        </button>
-
-        <button
-          type="button"
-          className={isActive("/learn") ? "active" : ""}
-          onClick={() => navigate("/learn")}
-        >
-          Learn
-        </button>
-
-        <button
-          type="button"
-          className={isActive("/admin/vendors") ? "active" : ""}
-          onClick={() => navigate("/admin/vendors")}
-        >
-          For Vendors
-        </button>
+        {renderNavigationItems()}
       </nav>
 
       {/* MOBILE MENU */}
@@ -197,53 +206,14 @@ export default function Header() {
           onClick={() => setMobileMenuOpen((previous) => !previous)}
           aria-expanded={mobileMenuOpen}
           aria-haspopup="true"
+          aria-label="Toggle navigation menu"
         >
           <span>Menu</span>
           <ChevronDown size={15} className={mobileMenuOpen ? "rotate" : ""} />
         </button>
 
         {mobileMenuOpen && (
-          <div className="mobile-dropdown">
-            <button
-              type="button"
-              className={isActive("/software") ? "active" : ""}
-              onClick={() => handleNavigation("/software")}
-            >
-              Software
-            </button>
-
-            <button
-              type="button"
-              className={isActive("/compare") ? "active" : ""}
-              onClick={() => handleNavigation("/compare")}
-            >
-              Compare
-            </button>
-
-            <button
-              type="button"
-              className={isActive("/recommend") ? "active" : ""}
-              onClick={() => handleNavigation("/recommend")}
-            >
-              Find My Software
-            </button>
-
-            <button
-              type="button"
-              className={isActive("/learn") ? "active" : ""}
-              onClick={() => handleNavigation("/learn")}
-            >
-              Learn
-            </button>
-
-            <button
-              type="button"
-              className={isActive("/admin/vendors") ? "active" : ""}
-              onClick={() => handleNavigation("/admin/vendors")}
-            >
-              For Vendors
-            </button>
-          </div>
+          <div className="mobile-dropdown">{renderNavigationItems()}</div>
         )}
       </div>
 
@@ -292,18 +262,18 @@ export default function Header() {
                     alt={`${userName || "User"} profile`}
                     className="avatar-image"
                     onLoad={() => {
-                      console.log("[Header] Avatar loaded:", avatarUrl);
+                      console.info("[Header] Avatar loaded successfully");
                     }}
                     onError={() => {
                       console.error(
-                        "[Header] Failed to load avatar:",
+                        "[Header] Avatar failed to load:",
                         avatarUrl,
                       );
                       setAvatarLoadFailed(true);
                     }}
                   />
                 ) : (
-                  initials
+                  <span aria-label="User initials">{initials}</span>
                 )}
               </span>
 
