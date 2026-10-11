@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   registerUser,
@@ -30,12 +37,21 @@ function getStoredUser() {
 }
 
 function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch (error) {
+    console.error("Failed to read authentication token:", error);
+    return null;
+  }
 }
 
 function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  } catch (error) {
+    console.error("Failed to clear authentication session:", error);
+  }
 }
 
 /*
@@ -54,40 +70,37 @@ function extractToken(response) {
   );
 }
 
-/**
- * Mendukung beberapa format respons:
- *
- * { user: {...} }
- * { data: { user: {...} } }
- * { success: true, data: { user: {...} } }
- *
- * api.js menggunakan fetch dan mengembalikan JSON secara langsung.
- */
 function extractUser(response) {
   if (!response || typeof response !== "object") {
     return null;
   }
 
-  if (
-    response.user &&
-    typeof response.user === "object" &&
-    !Array.isArray(response.user)
-  ) {
-    return response.user;
+  const candidates = [
+    response.user,
+    response.data?.user,
+    response.data?.data?.user,
+    response.data,
+  ];
+
+  for (const candidate of candidates) {
+    if (
+      candidate &&
+      typeof candidate === "object" &&
+      !Array.isArray(candidate) &&
+      (candidate.id !== undefined ||
+        candidate.name !== undefined ||
+        candidate.email !== undefined)
+    ) {
+      return candidate;
+    }
   }
 
+  // Fallback jika API langsung mengembalikan objek user.
   if (
-    response.data?.user &&
-    typeof response.data.user === "object" &&
-    !Array.isArray(response.data.user)
-  ) {
-    return response.data.user;
-  }
-
-  // Fallback jika endpoint langsung mengembalikan objek user.
-  if (
-    response.id !== undefined &&
-    (response.name !== undefined || response.email !== undefined)
+    !Array.isArray(response) &&
+    (response.id !== undefined ||
+      response.name !== undefined ||
+      response.email !== undefined)
   ) {
     return response;
   }
@@ -96,8 +109,12 @@ function extractUser(response) {
 }
 
 function persistUser(user) {
-  if (user) {
+  if (!user) return;
+
+  try {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch (error) {
+    console.error("Failed to persist user:", error);
   }
 }
 
@@ -126,19 +143,11 @@ function persistSession(response) {
 */
 
 function getUserRoles(user) {
-  if (!user) {
-    return [];
-  }
+  if (!user) return [];
 
   if (Array.isArray(user.roles)) {
     return user.roles
-      .map((role) => {
-        if (typeof role === "string") {
-          return role;
-        }
-
-        return role?.name;
-      })
+      .map((role) => (typeof role === "string" ? role : role?.name))
       .filter(Boolean);
   }
 
@@ -154,9 +163,7 @@ function getUserRoles(user) {
 }
 
 function getUserPermissions(user) {
-  if (!user) {
-    return [];
-  }
+  if (!user) return [];
 
   const permissions = [];
 
@@ -172,9 +179,7 @@ function getUserPermissions(user) {
 
   if (Array.isArray(user.roles)) {
     user.roles.forEach((role) => {
-      if (!Array.isArray(role?.permissions)) {
-        return;
-      }
+      if (!Array.isArray(role?.permissions)) return;
 
       permissions.push(
         ...role.permissions
@@ -211,7 +216,7 @@ export function AuthProvider({ children }) {
 
   /*
   |--------------------------------------------------------------------------
-  | Restore Session From Backend
+  | Restore Session
   |--------------------------------------------------------------------------
   */
 
@@ -226,7 +231,6 @@ export function AuthProvider({ children }) {
           setUser(null);
           setLoading(false);
         }
-
         return;
       }
 
@@ -269,7 +273,7 @@ export function AuthProvider({ children }) {
   |--------------------------------------------------------------------------
   */
 
-  const getMe = async () => {
+  const getMe = useCallback(async () => {
     const response = await getCurrentUser();
     const currentUser = extractUser(response);
 
@@ -281,7 +285,7 @@ export function AuthProvider({ children }) {
     persistUser(currentUser);
 
     return response;
-  };
+  }, []);
 
   /*
   |--------------------------------------------------------------------------
@@ -289,39 +293,56 @@ export function AuthProvider({ children }) {
   |--------------------------------------------------------------------------
   */
 
-  const updateProfile = async (payload) => {
-    // Tunggu backend menyelesaikan request terlebih dahulu.
-    const response = await updateUserProfile(payload);
+  const updateProfile = useCallback(
+    async (payload) => {
+      // authService harus mendukung FormData untuk upload avatar.
+      const response = await updateUserProfile(payload);
 
-    let updatedUser = extractUser(response);
+      let updatedUser = extractUser(response);
 
-    // Jika endpoint hanya mengembalikan pesan sukses,
-    // ambil user terbaru dari backend.
-    if (!updatedUser) {
-      const refreshedResponse = await getCurrentUser();
-      updatedUser = extractUser(refreshedResponse);
-    }
+      // Jika respons update tidak menyertakan user, ambil ulang
+      // profil terbaru dari endpoint authenticated user.
+      if (!updatedUser) {
+        const refreshedResponse = await getCurrentUser();
+        updatedUser = extractUser(refreshedResponse);
+      }
 
-    if (!updatedUser) {
-      throw new Error("The API did not return the updated profile.");
-    }
+      if (!updatedUser) {
+        throw new Error("The API did not return the updated profile.");
+      }
 
-    // Pertahankan role dan permission jika tidak dikirim
-    // dalam respons update profil.
-    const nextUser = {
-      ...getStoredUser(),
-      ...user,
-      ...updatedUser,
-    };
+      // Pertahankan role, permission, dan properti lain yang tidak
+      // dikirim backend, tetapi prioritaskan nilai terbaru dari API.
+      const existingUser = getStoredUser() || user || {};
 
-    // React Context diperbarui sehingga Header ikut render ulang.
-    setUser(nextUser);
+      const nextUser = {
+        ...existingUser,
+        ...(user || {}),
+        ...updatedUser,
+      };
 
-    // Cache lokal disinkronkan dengan respons terbaru.
-    persistUser(nextUser);
+      // Perbarui Context agar Header dan komponen lain ikut render ulang.
+      setUser(nextUser);
+      persistUser(nextUser);
 
-    return response;
-  };
+      // Pastikan Profile.jsx juga bisa membaca response.user.
+      if (
+        response &&
+        typeof response === "object" &&
+        !Array.isArray(response)
+      ) {
+        return {
+          ...response,
+          user: nextUser,
+        };
+      }
+
+      return {
+        user: nextUser,
+      };
+    },
+    [user],
+  );
 
   /*
   |--------------------------------------------------------------------------
@@ -329,7 +350,7 @@ export function AuthProvider({ children }) {
   |--------------------------------------------------------------------------
   */
 
-  const login = async (credentials) => {
+  const login = useCallback(async (credentials) => {
     const response = await loginUser(credentials);
     const { user: currentUser } = persistSession(response);
 
@@ -338,7 +359,7 @@ export function AuthProvider({ children }) {
     }
 
     return response;
-  };
+  }, []);
 
   /*
   |--------------------------------------------------------------------------
@@ -346,7 +367,7 @@ export function AuthProvider({ children }) {
   |--------------------------------------------------------------------------
   */
 
-  const register = async (payload) => {
+  const register = useCallback(async (payload) => {
     const response = await registerUser(payload);
     const { user: currentUser } = persistSession(response);
 
@@ -355,7 +376,7 @@ export function AuthProvider({ children }) {
     }
 
     return response;
-  };
+  }, []);
 
   /*
   |--------------------------------------------------------------------------
@@ -363,7 +384,7 @@ export function AuthProvider({ children }) {
   |--------------------------------------------------------------------------
   */
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       if (getToken()) {
         await logoutUser();
@@ -374,7 +395,7 @@ export function AuthProvider({ children }) {
       clearSession();
       setUser(null);
     }
-  };
+  }, []);
 
   /*
   |--------------------------------------------------------------------------
@@ -403,31 +424,33 @@ export function AuthProvider({ children }) {
   |--------------------------------------------------------------------------
   */
 
-  const hasRole = (requiredRole) => {
-    if (!requiredRole) {
-      return true;
-    }
+  const hasRole = useCallback(
+    (requiredRole) => {
+      if (!requiredRole) return true;
 
-    if (Array.isArray(requiredRole)) {
-      return requiredRole.some((item) => roles.includes(item));
-    }
+      if (Array.isArray(requiredRole)) {
+        return requiredRole.some((item) => roles.includes(item));
+      }
 
-    return roles.includes(requiredRole);
-  };
+      return roles.includes(requiredRole);
+    },
+    [roles],
+  );
 
-  const hasPermission = (requiredPermission) => {
-    if (!requiredPermission) {
-      return true;
-    }
+  const hasPermission = useCallback(
+    (requiredPermission) => {
+      if (!requiredPermission) return true;
 
-    if (Array.isArray(requiredPermission)) {
-      return requiredPermission.every((permission) =>
-        permissions.includes(permission),
-      );
-    }
+      if (Array.isArray(requiredPermission)) {
+        return requiredPermission.every((permission) =>
+          permissions.includes(permission),
+        );
+      }
 
-    return permissions.includes(requiredPermission);
-  };
+      return permissions.includes(requiredPermission);
+    },
+    [permissions],
+  );
 
   /*
   |--------------------------------------------------------------------------
@@ -452,7 +475,22 @@ export function AuthProvider({ children }) {
       register,
       logout,
     }),
-    [user, loading, token, isAuthenticated, role, roles, permissions],
+    [
+      user,
+      loading,
+      token,
+      isAuthenticated,
+      role,
+      roles,
+      permissions,
+      hasRole,
+      hasPermission,
+      getMe,
+      updateProfile,
+      login,
+      register,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

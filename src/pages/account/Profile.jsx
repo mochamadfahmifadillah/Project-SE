@@ -9,26 +9,81 @@ const TABS = [
   { id: "security", label: "Account Security", icon: "lock" },
 ];
 
-const API_ORIGIN = (
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
-)
-  .replace(/\/api\/v1\/?$/, "")
-  .replace(/\/+$/, "");
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://software-empire-backend.vercel.app/api/v1"
+).replace(/\/+$/, "");
+
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1\/?$/i, "");
+
+const INITIAL_FORM = {
+  name: "",
+  phone: "",
+  job_title: "",
+  location: "",
+  company: "",
+  business_size: "",
+  industry: "",
+  business_need: "",
+  bio: "",
+};
 
 function getAvatarUrl(value) {
-  if (!value || typeof value !== "string") return null;
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
 
   const path = value.trim();
 
-  if (!path) return null;
-
-  if (/^(https?:|data:|blob:)/i.test(path)) {
+  // URL eksternal, data URL, dan preview lokal.
+  if (/^(https?:\/\/|data:|blob:)/i.test(path)) {
     return path;
   }
 
-  const normalizedPath = path.replace(/^\/+/, "").replace(/^storage\//, "");
+  const normalizedPath = path
+    .replace(/^\/+/, "")
+    .replace(/^api\/v1\//i, "")
+    .replace(/^storage\//i, "");
+
+  if (
+    !normalizedPath ||
+    normalizedPath.split("/").some((segment) => segment === "..")
+  ) {
+    return null;
+  }
 
   return `${API_ORIGIN}/storage/${normalizedPath}`;
+}
+
+function getUserAvatar(user) {
+  return (
+    user?.avatar_url ??
+    user?.avatar ??
+    user?.profile_picture ??
+    user?.profilePicture ??
+    user?.profile_photo_url ??
+    user?.profile_photo ??
+    user?.photo_url ??
+    null
+  );
+}
+
+function getErrorMessage(error) {
+  const data = error?.response?.data ?? error?.data;
+
+  if (data?.errors && typeof data.errors === "object") {
+    const firstError = Object.values(data.errors).flat()[0];
+
+    if (typeof firstError === "string") {
+      return firstError;
+    }
+  }
+
+  return (
+    data?.message ||
+    error?.message ||
+    "Failed to update profile. Please try again."
+  );
 }
 
 function Profile() {
@@ -42,24 +97,17 @@ function Profile() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+
   const [emailNotifications, setEmailNotifications] = useState(true);
 
   const fileInputRef = useRef(null);
   const previewUrlRef = useRef(null);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    job_title: "",
-    location: "",
-    company: "",
-    business_size: "",
-    industry: "",
-    business_need: "",
-    bio: "",
-  });
+  const [formData, setFormData] = useState(INITIAL_FORM);
 
   useEffect(() => {
     if (!authUser) return;
@@ -88,26 +136,25 @@ function Profile() {
   const fullName = authUser?.name || "User";
   const email = authUser?.email || "—";
 
-  const savedAvatar = getAvatarUrl(
-    authUser?.avatar_url ||
-      authUser?.avatar ||
-      authUser?.profile_picture ||
-      authUser?.profilePicture,
-  );
-
+  const savedAvatar = getAvatarUrl(getUserAvatar(authUser));
   const avatar = avatarPreview || savedAvatar;
 
-  const initials = useMemo(
-    () =>
-      fullName
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((word) => word.charAt(0))
-        .join("")
-        .toUpperCase() || "U",
-    [fullName],
-  );
+  const initials = useMemo(() => {
+    const result = fullName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word.charAt(0))
+      .join("")
+      .toUpperCase();
+
+    return result || "U";
+  }, [fullName]);
+
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [avatar]);
 
   const memberSince = authUser?.created_at
     ? new Date(authUser.created_at).toLocaleDateString("en-US", {
@@ -161,6 +208,20 @@ function Profile() {
     setErrorMessage("");
   };
 
+  const clearAvatarPreview = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+
+    setAvatarPreview(null);
+    setAvatarFile(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleAvatarChange = (event) => {
     const file = event.target.files?.[0];
 
@@ -190,6 +251,7 @@ function Profile() {
 
     setAvatarFile(file);
     setAvatarPreview(previewUrl);
+    setAvatarLoadFailed(false);
     setSaveStatus("");
     setErrorMessage("");
   };
@@ -197,8 +259,17 @@ function Profile() {
   const handleSaveProfile = async (event) => {
     event.preventDefault();
 
+    if (saving) return;
+
     if (!formData.name.trim()) {
       setErrorMessage("Full name is required.");
+      return;
+    }
+
+    if (typeof updateProfile !== "function") {
+      setErrorMessage(
+        "Profile update is unavailable. Please check AuthContext.",
+      );
       return;
     }
 
@@ -209,58 +280,48 @@ function Profile() {
 
       const payload = new FormData();
 
-      payload.append("name", formData.name.trim());
-      payload.append("phone", formData.phone.trim());
-      payload.append("job_title", formData.job_title.trim());
-      payload.append("location", formData.location.trim());
-      payload.append("company", formData.company.trim());
-      payload.append("business_size", formData.business_size.trim());
-      payload.append("industry", formData.industry.trim());
-      payload.append("business_need", formData.business_need.trim());
-      payload.append("bio", formData.bio.trim());
+      Object.entries(formData).forEach(([key, value]) => {
+        payload.append(key, typeof value === "string" ? value.trim() : value);
+      });
 
       if (avatarFile) {
-        payload.append("avatar", avatarFile);
+        payload.append("avatar", avatarFile, avatarFile.name);
       }
 
+      // updateProfile must send FormData without forcing
+      // Content-Type: application/json.
       const response = await updateProfile(payload);
 
-      const updatedUser = response?.data?.user || response?.user || null;
+      if (response?.success === false) {
+        throw new Error(response.message || "Profile update failed.");
+      }
+
+      const updatedUser =
+        response?.data?.user ??
+        response?.user ??
+        response?.data?.data?.user ??
+        null;
 
       if (updatedUser) {
         setFormData({
-          name: updatedUser.name || "",
-          phone: updatedUser.phone || "",
-          job_title: updatedUser.job_title || "",
-          location: updatedUser.location || "",
-          company: updatedUser.company || "",
-          business_size: updatedUser.business_size || "",
-          industry: updatedUser.industry || "",
-          business_need: updatedUser.business_need || "",
-          bio: updatedUser.bio || "",
+          name: updatedUser.name ?? formData.name,
+          phone: updatedUser.phone ?? formData.phone,
+          job_title: updatedUser.job_title ?? formData.job_title,
+          location: updatedUser.location ?? formData.location,
+          company: updatedUser.company ?? formData.company,
+          business_size: updatedUser.business_size ?? formData.business_size,
+          industry: updatedUser.industry ?? formData.industry,
+          business_need: updatedUser.business_need ?? formData.business_need,
+          bio: updatedUser.bio ?? formData.bio,
         });
       }
 
-      // Context should now contain the latest avatar path returned by the API.
-      setAvatarFile(null);
-      setAvatarPreview(null);
-
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current);
-        previewUrlRef.current = null;
-      }
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
+      clearAvatarPreview();
+      setAvatarLoadFailed(false);
       setSaveStatus("Profile updated successfully.");
     } catch (error) {
       console.error("Profile update failed:", error);
-
-      setErrorMessage(
-        error?.message || "Failed to update profile. Please try again.",
-      );
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -275,17 +336,19 @@ function Profile() {
   const renderAvatar = () => (
     <div className="profile-avatar-wrapper">
       <div className="profile-avatar">
-        {avatar ? (
+        {avatar && !avatarLoadFailed ? (
           <img
+            key={avatar}
             src={avatar}
-            alt={fullName}
-            onError={(event) => {
-              // Fall back to initials if the saved image URL is inaccessible.
-              event.currentTarget.style.display = "none";
+            alt={`${fullName} profile`}
+            onLoad={() => setAvatarLoadFailed(false)}
+            onError={() => {
+              console.error("Profile avatar failed to load:", avatar);
+              setAvatarLoadFailed(true);
             }}
           />
         ) : (
-          initials
+          <span>{initials}</span>
         )}
       </div>
 
@@ -293,7 +356,8 @@ function Profile() {
         type="button"
         onClick={() => fileInputRef.current?.click()}
         className="profile-avatar-button"
-        aria-label="Upload avatar"
+        aria-label="Choose profile avatar"
+        disabled={saving}
       >
         <Icon name="camera" />
       </button>
@@ -327,9 +391,10 @@ function Profile() {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/gif,image/webp"
+        accept="image/jpeg,image/png,image/gif,image/webp"
         className="profile-file-input"
         onChange={handleAvatarChange}
+        disabled={saving}
       />
 
       <div className="profile-header">
@@ -365,7 +430,6 @@ function Profile() {
               recommendations.
             </p>
           </div>
-
           <strong>{profileCompleteness}%</strong>
         </div>
 
@@ -411,6 +475,12 @@ function Profile() {
                     <br />
                     Max size 2MB
                   </p>
+
+                  {avatarFile && (
+                    <p className="profile-avatar-help">
+                      Selected: {avatarFile.name}
+                    </p>
+                  )}
                 </div>
 
                 <div className="profile-fields-grid">
@@ -499,7 +569,6 @@ function Profile() {
                   maxLength={1000}
                   placeholder="Tell us a little about yourself..."
                 />
-
                 <div className="profile-counter">
                   {formData.bio.length}/1000
                 </div>
@@ -513,9 +582,6 @@ function Profile() {
                     interests.map((interest) => (
                       <span key={interest} className="profile-interest">
                         {interest}
-                        <button type="button" aria-label={`Remove ${interest}`}>
-                          ×
-                        </button>
                       </span>
                     ))
                   ) : (
@@ -736,8 +802,11 @@ function Profile() {
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
                 </div>
-
-                <button type="button" className="profile-switch active">
+                <button
+                  type="button"
+                  className="profile-switch active"
+                  aria-label={item.title}
+                >
                   <span />
                 </button>
               </div>

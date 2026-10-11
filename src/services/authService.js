@@ -6,38 +6,31 @@ import api from "./api";
 |--------------------------------------------------------------------------
 */
 
-/**
- * POST /register
- */
 export async function registerUser(payload) {
   return api.post("/register", payload);
 }
 
-/**
- * POST /login
- */
 export async function loginUser(payload) {
   return api.post("/login", payload);
 }
 
-/**
- * GET /me
- *
- * Get the currently authenticated user.
- */
 export async function getMe() {
   return api.get("/me");
 }
 
 /**
+ * Update profil pengguna yang sedang login.
+ *
+ * JSON:
  * PATCH /me
  *
- * Update the authenticated user's profile.
- * Supports both JSON payloads and FormData avatar uploads.
+ * FormData:
+ * POST /me dengan _method=PATCH
  */
 export async function updateProfile(payload) {
-  if (payload instanceof FormData) {
-    // Laravel method spoofing supports multipart form submissions.
+  if (typeof FormData !== "undefined" && payload instanceof FormData) {
+    // Laravel menerima multipart upload melalui POST
+    // dengan method spoofing PATCH.
     payload.set("_method", "PATCH");
 
     return api.post("/me", payload);
@@ -46,9 +39,6 @@ export async function updateProfile(payload) {
   return api.patch("/me", payload);
 }
 
-/**
- * POST /logout
- */
 export async function logoutUser() {
   return api.post("/logout");
 }
