@@ -6,9 +6,7 @@ import {
   Check,
   ExternalLink,
   GitCompare,
-  Handshake,
   HelpCircle,
-  Heart,
   Pencil,
   Star,
   Trophy,
@@ -16,6 +14,7 @@ import {
   Wallet,
   Building2,
   Factory,
+  Handshake,
 } from "lucide-react";
 
 import PublicLayout from "../../layouts/PublicLayout";
@@ -24,173 +23,198 @@ import Button from "../../components/common/Button";
 function RecommendationResult({ answers = {}, result = {}, onRetake }) {
   const navigate = useNavigate();
 
-  /* =========================================================
-     RECOMMENDATIONS
-  ========================================================= */
+  /*
+  |--------------------------------------------------------------------------
+  | Recommendations
+  |--------------------------------------------------------------------------
+  */
 
-  const recommendations =
-    result?.recommendations ||
-    result?.data?.recommendations ||
-    result?.data ||
-    [];
+  const recommendations = useMemo(() => {
+    if (Array.isArray(result?.recommendations)) {
+      return result.recommendations;
+    }
 
-  const safeRecommendations = Array.isArray(recommendations)
-    ? recommendations
-    : [];
+    if (Array.isArray(result?.data?.recommendations)) {
+      return result.data.recommendations;
+    }
 
-  const topRecommendations = safeRecommendations.slice(0, 3);
-  const otherRecommendations = safeRecommendations.slice(3);
+    if (Array.isArray(result?.data)) {
+      return result.data;
+    }
 
-  /* =========================================================
-     SUMMARY DATA
-  ========================================================= */
+    return [];
+  }, [result]);
+
+  const topRecommendations = recommendations.slice(0, 3);
+  const otherRecommendations = recommendations.slice(3);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Summary Data
+  |--------------------------------------------------------------------------
+  */
+
+  const getAnswer = (...values) => {
+    const value = values.find((item) => {
+      if (Array.isArray(item)) {
+        return item.length > 0;
+      }
+
+      return item !== undefined && item !== null && item !== "";
+    });
+
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value.join(", ") : "Belum dijawab";
+    }
+
+    return value ?? "Belum dijawab";
+  };
 
   const summaryItems = useMemo(
     () => [
       {
         label: "Business Type",
-        value:
-          answers.business_type ||
-          answers.businessType ||
-          answers.business_type_name ||
-          "B2B",
+        value: getAnswer(
+          answers.business_type,
+          answers.businessType,
+          answers.business_type_name,
+        ),
         icon: <Building2 size={20} strokeWidth={2} />,
       },
       {
         label: "Industry",
-        value:
-          answers.industry || answers.industry_name || "Retail & E-commerce",
+        value: getAnswer(answers.industry, answers.industry_name),
         icon: <Factory size={20} strokeWidth={2} />,
       },
       {
         label: "Team Size",
-        value:
-          answers.team_size ||
-          answers.teamSize ||
-          answers.team_size_name ||
-          "20 - 50 people",
+        value: getAnswer(
+          answers.team_size,
+          answers.teamSize,
+          answers.team_size_name,
+        ),
         icon: <Users size={20} strokeWidth={2} />,
       },
       {
         label: "Budget",
-        value:
-          answers.budget || answers.budget_range || "$1,000 - $5,000 / month",
+        value: getAnswer(answers.budget, answers.budget_range),
         icon: <Wallet size={20} strokeWidth={2} />,
       },
     ],
     [answers],
   );
 
-  /* =========================================================
-     HELPERS
-  ========================================================= */
+  /*
+  |--------------------------------------------------------------------------
+  | Helpers
+  |--------------------------------------------------------------------------
+  */
 
   const getScore = (item) => {
     const raw =
-      item?.match_score ?? item?.matchScore ?? item?.score ?? item?.fit ?? 0;
+      item?.match_score ?? item?.matchScore ?? item?.score ?? item?.fit;
+
+    if (raw === undefined || raw === null || raw === "") {
+      return null;
+    }
 
     if (typeof raw === "string" && raw.includes("%")) {
-      const parsed = parseFloat(raw);
+      const parsed = Number.parseFloat(raw);
 
-      return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+      return Number.isFinite(parsed)
+        ? Math.max(0, Math.min(100, Math.round(parsed)))
+        : null;
     }
 
     const number = Number(raw);
 
     if (!Number.isFinite(number)) {
-      return 0;
+      return null;
     }
 
-    if (number > 0 && number <= 1) {
-      return Math.round(number * 100);
-    }
+    const score = number > 0 && number <= 1 ? number * 100 : number;
 
-    return Math.max(0, Math.min(100, Math.round(number)));
+    return Math.max(0, Math.min(100, Math.round(score)));
   };
 
   const getRating = (item) => {
-    const raw =
-      item?.rating ?? item?.average_rating ?? item?.review_rating ?? 4.6;
+    const raw = item?.rating ?? item?.average_rating ?? item?.review_rating;
+
+    if (raw === undefined || raw === null || raw === "") {
+      return null;
+    }
 
     const rating = Number(raw);
 
-    return Number.isFinite(rating) ? rating.toFixed(1) : "4.6";
+    if (!Number.isFinite(rating) || rating < 0 || rating > 5) {
+      return null;
+    }
+
+    return rating.toFixed(1);
   };
 
   const getReviews = (item) => {
-    const raw =
-      item?.reviews_count ?? item?.review_count ?? item?.reviews ?? 2456;
+    const raw = item?.reviews_count ?? item?.review_count ?? item?.reviews;
+
+    if (raw === undefined || raw === null || raw === "") {
+      return null;
+    }
 
     if (typeof raw === "number") {
-      return raw;
+      return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : null;
     }
 
-    const cleaned = String(raw).replace(/,/g, "");
-    const number = Number(cleaned);
+    const number = Number(String(raw).replace(/,/g, ""));
 
-    return Number.isFinite(number) ? number : 2456;
+    return Number.isFinite(number) && number >= 0 ? Math.floor(number) : null;
   };
 
-  const getDescription = (item) =>
-    item?.description ||
-    "Complete software platform designed to help your business attract, engage and delight customers.";
+  const getDescription = (item) => {
+    return (
+      item?.description ||
+      item?.short_description ||
+      item?.shortDescription ||
+      "Deskripsi software belum tersedia."
+    );
+  };
+
+  const normalizeLabel = (value) => {
+    if (typeof value === "string") {
+      return value.trim();
+    }
+
+    if (typeof value === "object" && value !== null) {
+      return (
+        value.name ||
+        value.title ||
+        value.feature_name ||
+        value.label ||
+        value.category_name ||
+        ""
+      );
+    }
+
+    return "";
+  };
 
   const getFeatures = (item) => {
-    if (Array.isArray(item?.features)) {
-      return item.features.slice(0, 5).map((feature) => {
-        if (typeof feature === "string") {
-          return feature;
-        }
+    const source = Array.isArray(item?.features)
+      ? item.features
+      : Array.isArray(item?.must_have_features)
+        ? item.must_have_features
+        : [];
 
-        return (
-          feature?.name ||
-          feature?.title ||
-          feature?.feature_name ||
-          "Business feature"
-        );
-      });
-    }
-
-    if (Array.isArray(item?.tags)) {
-      return item.tags.slice(0, 5).map((tag) => {
-        if (typeof tag === "string") {
-          return tag;
-        }
-
-        return tag?.name || tag?.title || "Business feature";
-      });
-    }
-
-    return [
-      "Meets your must-have features",
-      "Fits your business requirements",
-      "Within your budget range",
-      "Good fit for your team size",
-    ];
+    return source.map(normalizeLabel).filter(Boolean).slice(0, 4);
   };
 
   const getTags = (item) => {
-    if (Array.isArray(item?.tags)) {
-      return item.tags.slice(0, 3).map((tag) => {
-        if (typeof tag === "string") {
-          return tag;
-        }
+    const source = Array.isArray(item?.tags)
+      ? item.tags
+      : Array.isArray(item?.categories)
+        ? item.categories
+        : [];
 
-        return tag?.name || tag?.title || "Feature";
-      });
-    }
-
-    if (Array.isArray(item?.categories)) {
-      return item.categories.slice(0, 3).map((category) => {
-        if (typeof category === "string") {
-          return category;
-        }
-
-        return category?.name || category?.title || "Category";
-      });
-    }
-
-    return ["CRM", "Sales Automation", "Marketing Automation"];
+    return source.map(normalizeLabel).filter(Boolean).slice(0, 3);
   };
 
   const getLogo = (item) => {
@@ -205,69 +229,89 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
   };
 
   const getMatchLabel = (score) => {
-    if (score >= 90) {
-      return "Excellent Match";
+    if (score === null) {
+      return "Score unavailable";
     }
 
-    if (score >= 80) {
-      return "Great Match";
-    }
-
-    if (score >= 70) {
-      return "Good Match";
-    }
+    if (score >= 90) return "Excellent Match";
+    if (score >= 80) return "Great Match";
+    if (score >= 70) return "Good Match";
 
     return "Potential Match";
   };
 
-  /* =========================================================
-     HANDLERS
-  ========================================================= */
+  const getSoftwareName = (item) => {
+    return item?.name || item?.software_name || "Software";
+  };
 
-  const handleDetails = (item) => {
-    if (!item?.slug) {
-      return;
+  const getSoftwareSlug = (item) => {
+    return item?.slug || item?.software_slug || null;
+  };
+
+  const getWebsite = (item) => {
+    const website = item?.website || item?.url;
+
+    if (typeof website !== "string" || !website.trim()) {
+      return null;
     }
 
-    navigate(`/software/${item.slug}`);
+    if (!/^https?:\/\//i.test(website)) {
+      return null;
+    }
+
+    return website;
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Handlers
+  |--------------------------------------------------------------------------
+  */
+
+  const handleDetails = (item) => {
+    const slug = getSoftwareSlug(item);
+
+    if (!slug) return;
+
+    navigate(`/software/${encodeURIComponent(slug)}`);
   };
 
   const handleCompare = (item) => {
-    if (!item?.slug) {
-      return;
-    }
+    const slug = getSoftwareSlug(item);
 
-    navigate(`/compare?software=${item.slug}`);
+    if (!slug) return;
+
+    navigate(`/compare?software=${encodeURIComponent(slug)}`);
   };
 
   const handleVisitWebsite = (item) => {
-    const website = item?.website || item?.url;
+    const website = getWebsite(item);
 
-    if (!website || website === "#") {
-      return;
-    }
+    if (!website) return;
 
     window.open(website, "_blank", "noopener,noreferrer");
   };
 
   const handleCompareAll = () => {
-    const slugs = topRecommendations.map((item) => item?.slug).filter(Boolean);
+    const slugs = topRecommendations.map(getSoftwareSlug).filter(Boolean);
 
     if (!slugs.length) {
       navigate("/compare");
       return;
     }
 
-    navigate(`/compare?software=${slugs.join(",")}`);
+    navigate(`/compare?software=${slugs.map(encodeURIComponent).join(",")}`);
   };
 
   const handleImplementation = () => {
     navigate("/implementation");
   };
 
-  /* =========================================================
-     PROGRESS STEPS
-  ========================================================= */
+  /*
+  |--------------------------------------------------------------------------
+  | Progress
+  |--------------------------------------------------------------------------
+  */
 
   const progressSteps = [
     "Business Type",
@@ -282,24 +326,27 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
     "Results",
   ];
 
+  /*
+  |--------------------------------------------------------------------------
+  | Render
+  |--------------------------------------------------------------------------
+  */
+
   return (
     <PublicLayout>
       <main className="recommendation-page">
-        {/* =====================================================
-            HEADER
-        ====================================================== */}
-
+        {/* Header */}
         <section className="recommendation-header">
           <div>
             <span className="recommendation-eyebrow">
               RECOMMENDATION RESULT
             </span>
 
-            <h1>Here are your top software recommendations!</h1>
+            <h1>Your software recommendations</h1>
 
             <p>
-              Based on your answers, we found the best software that match your
-              business needs.
+              Explore software options based on the information you provided.
+              Unanswered questions were left out of your submitted preferences.
             </p>
           </div>
 
@@ -313,10 +360,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
           </Button>
         </section>
 
-        {/* =====================================================
-            PROGRESS
-        ====================================================== */}
-
+        {/* Progress */}
         <section
           className="recommendation-progress"
           aria-label="Recommendation progress"
@@ -324,22 +368,18 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
           <div className="progress-line" />
 
           {progressSteps.map((step, index) => {
-            const isLastStep = index === progressSteps.length - 1;
-
-            /*
-             * Result page = step 10.
-             *
-             * Step 1 - 9 = completed
-             * Step 10 = active
-             */
-            const active = isLastStep;
+            const active = index === progressSteps.length - 1;
             const completed = index < progressSteps.length - 1;
 
             return (
               <div
-                className={`progress-step ${
-                  active ? "active" : ""
-                } ${completed ? "completed" : ""}`}
+                className={[
+                  "progress-step",
+                  active ? "active" : "",
+                  completed ? "completed" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 key={step}
               >
                 <div className="progress-circle">
@@ -356,10 +396,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
           })}
         </section>
 
-        {/* =====================================================
-            RESULT SUMMARY
-        ====================================================== */}
-
+        {/* Result Summary */}
         <section className="result-summary">
           <div className="summary-illustration">
             <div className="summary-trophy">
@@ -368,12 +405,9 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
           </div>
 
           <div className="summary-content">
-            <h2>Here are your top software recommendations!</h2>
+            <h2>Recommendation overview</h2>
 
-            <p>
-              Based on your answers, we found the best software that match your
-              business needs.
-            </p>
+            <p>These are the preferences submitted for this recommendation.</p>
 
             <div className="summary-items">
               {summaryItems.map((item) => (
@@ -382,7 +416,6 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
 
                   <div>
                     <span>{item.label}</span>
-
                     <strong>{item.value}</strong>
                   </div>
                 </div>
@@ -396,11 +429,8 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
           </button>
         </section>
 
-        {/* =====================================================
-            NO RESULT
-        ====================================================== */}
-
-        {!safeRecommendations.length && (
+        {/* No Results */}
+        {!recommendations.length && (
           <section className="recommendation-empty">
             <div className="empty-icon">
               <HelpCircle size={32} strokeWidth={1.8} />
@@ -409,25 +439,22 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
             <h2>No recommendations found</h2>
 
             <p>
-              We could not find suitable software based on your current
-              requirements.
+              There are no matching software recommendations for the submitted
+              preferences. Try answering more questions or changing your
+              preferences.
             </p>
 
             <Button onClick={onRetake}>Try Again</Button>
           </section>
         )}
 
-        {/* =====================================================
-            TOP 3 RECOMMENDATIONS
-        ====================================================== */}
-
+        {/* Top 3 Recommendations */}
         {topRecommendations.length > 0 && (
           <section className="top-recommendations">
             <div className="section-title-row">
               <div>
                 <span className="section-eyebrow">TOP PICKS</span>
-
-                <h2>Top 3 Recommended Software</h2>
+                <h2>Top {topRecommendations.length} Recommended Software</h2>
               </div>
 
               <span className="section-count">
@@ -438,113 +465,108 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
             <div className="recommendation-list">
               {topRecommendations.map((item, index) => {
                 const score = getScore(item);
+                const rating = getRating(item);
+                const reviews = getReviews(item);
                 const features = getFeatures(item);
                 const tags = getTags(item);
                 const logo = getLogo(item);
+                const name = getSoftwareName(item);
+                const website = getWebsite(item);
+                const slug = getSoftwareSlug(item);
 
                 return (
                   <article
                     className="recommendation-card"
-                    key={item?.id || item?.slug || index}
+                    key={item?.id || slug || `${name}-${index}`}
                   >
-                    {/* =================================================
-                        RANKING
-                    ================================================== */}
-
+                    {/* Ranking */}
                     <div className={`ranking-badge rank-${index + 1}`}>
                       {index + 1}
                     </div>
 
-                    {/* =================================================
-                        PRODUCT
-                    ================================================== */}
-
+                    {/* Product */}
                     <div className="recommendation-product">
                       <div className="software-logo-large">
                         {logo ? (
-                          <img
-                            src={logo}
-                            alt={`${item?.name || "Software"} logo`}
-                          />
+                          <img src={logo} alt={`${name} logo`} />
                         ) : (
-                          <span>
-                            {item?.name?.slice(0, 2).toUpperCase() || "SW"}
-                          </span>
+                          <span>{name.slice(0, 2).toUpperCase()}</span>
                         )}
                       </div>
 
                       <div className="product-info">
                         <div className="product-name-row">
-                          <h3>{item?.name || "Software"}</h3>
+                          <h3>{name}</h3>
 
                           {index === 0 && (
                             <span className="best-match-badge">
                               <Check size={13} strokeWidth={2.5} />
-                              Best Match
+                              Top Result
                             </span>
                           )}
                         </div>
 
-                        {/* =================================================
-                            RATING
-                        ================================================== */}
+                        {/* Rating */}
+                        {rating !== null && (
+                          <div className="rating-row">
+                            <span
+                              className="stars"
+                              aria-label={`${rating} out of 5 stars`}
+                            >
+                              {Array.from({ length: 5 }, (_, starIndex) => (
+                                <Star
+                                  key={starIndex}
+                                  size={16}
+                                  fill={
+                                    starIndex < Math.round(Number(rating))
+                                      ? "currentColor"
+                                      : "none"
+                                  }
+                                  strokeWidth={1.5}
+                                />
+                              ))}
+                            </span>
 
-                        <div className="rating-row">
-                          <span
-                            className="stars"
-                            aria-label={`${getRating(item)} out of 5 stars`}
-                          >
-                            {Array.from({ length: 5 }, (_, starIndex) => (
-                              <Star
-                                key={starIndex}
-                                size={16}
-                                fill="currentColor"
-                                strokeWidth={1.5}
-                              />
-                            ))}
-                          </span>
+                            <strong>{rating}</strong>
 
-                          <strong>{getRating(item)}</strong>
-
-                          <span>({getReviews(item).toLocaleString()})</span>
-                        </div>
-
-                        {/* =================================================
-                            DESCRIPTION
-                        ================================================== */}
+                            {reviews !== null && (
+                              <span>({reviews.toLocaleString()} reviews)</span>
+                            )}
+                          </div>
+                        )}
 
                         <p>{getDescription(item)}</p>
 
-                        {/* =================================================
-                            TAGS
-                        ================================================== */}
-
-                        <div className="software-tags">
-                          {tags.map((tag, tagIndex) => (
-                            <span key={`${tag}-${tagIndex}`}>{tag}</span>
-                          ))}
-
-                          <span>+2</span>
-                        </div>
+                        {/* Tags */}
+                        {tags.length > 0 && (
+                          <div className="software-tags">
+                            {tags.map((tag, tagIndex) => (
+                              <span key={`${tag}-${tagIndex}`}>{tag}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* =================================================
-                        MATCH SCORE
-                    ================================================== */}
-
+                    {/* Match Score */}
                     <div className="match-score">
                       <span className="match-title">Match Score</span>
 
                       <div
                         className="score-gauge"
                         style={{
-                          "--score": `${score * 3.6}deg`,
+                          "--score": `${(score ?? 0) * 3.6}deg`,
                         }}
-                        aria-label={`Match score ${score}%`}
+                        aria-label={
+                          score === null
+                            ? "Match score unavailable"
+                            : `Match score ${score}%`
+                        }
                       >
                         <div className="score-gauge-inner">
-                          <strong>{score}%</strong>
+                          <strong>
+                            {score === null ? "N/A" : `${score}%`}
+                          </strong>
                         </div>
                       </div>
 
@@ -553,35 +575,33 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                       </span>
                     </div>
 
-                    {/* =================================================
-                        WHY MATCH
-                    ================================================== */}
-
+                    {/* Why Match */}
                     <div className="why-match">
-                      <h4>Why it's a great match</h4>
+                      <h4>Software Features</h4>
 
-                      <ul>
-                        {features.slice(0, 4).map((feature, featureIndex) => (
-                          <li key={`${feature}-${featureIndex}`}>
-                            <span className="check-icon">
-                              <Check size={15} strokeWidth={2.5} />
-                            </span>
-
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      {features.length > 0 ? (
+                        <ul>
+                          {features.map((feature, featureIndex) => (
+                            <li key={`${feature}-${featureIndex}`}>
+                              <span className="check-icon">
+                                <Check size={15} strokeWidth={2.5} />
+                              </span>
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>Feature information is not available.</p>
+                      )}
                     </div>
 
-                    {/* =================================================
-                        ACTIONS
-                    ================================================== */}
-
+                    {/* Actions */}
                     <div className="recommendation-actions">
                       <button
                         type="button"
                         className="primary-action"
                         onClick={() => handleDetails(item)}
+                        disabled={!slug}
                       >
                         View Details
                         <ArrowRight size={16} strokeWidth={2} />
@@ -591,6 +611,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                         type="button"
                         className="secondary-action"
                         onClick={() => handleCompare(item)}
+                        disabled={!slug}
                       >
                         <GitCompare size={16} strokeWidth={2} />
                         Compare
@@ -600,15 +621,10 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
                         type="button"
                         className="secondary-action"
                         onClick={() => handleVisitWebsite(item)}
-                        disabled={!(item?.website || item?.url)}
+                        disabled={!website}
                       >
                         <ExternalLink size={16} strokeWidth={2} />
                         Visit Website
-                      </button>
-
-                      <button type="button" className="save-action">
-                        <Heart size={16} strokeWidth={2} />
-                        Save
                       </button>
                     </div>
                   </article>
@@ -618,16 +634,12 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
           </section>
         )}
 
-        {/* =====================================================
-            OTHER SOFTWARE
-        ====================================================== */}
-
+        {/* Other Software */}
         {otherRecommendations.length > 0 && (
           <section className="other-software">
             <div className="other-header">
               <div>
                 <span className="section-eyebrow">ALTERNATIVES</span>
-
                 <h3>Other software you might consider</h3>
               </div>
 
@@ -637,45 +649,41 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
             <div className="other-software-grid">
               {otherRecommendations.slice(0, 4).map((item, index) => {
                 const logo = getLogo(item);
+                const name = getSoftwareName(item);
+                const rating = getRating(item);
+                const slug = getSoftwareSlug(item);
 
                 return (
                   <button
                     type="button"
                     className="other-software-card"
-                    key={item?.id || item?.slug || index}
+                    key={item?.id || slug || `${name}-${index}`}
                     onClick={() => handleDetails(item)}
+                    disabled={!slug}
                   >
-                    {/* Logo */}
-
                     <div className="other-logo">
                       {logo ? (
-                        <img
-                          src={logo}
-                          alt={`${item?.name || "Software"} logo`}
-                        />
+                        <img src={logo} alt={`${name} logo`} />
                       ) : (
-                        item?.name?.slice(0, 1).toUpperCase() || "S"
+                        name.slice(0, 1).toUpperCase()
                       )}
                     </div>
 
-                    {/* Info */}
-
                     <div>
-                      <strong>{item?.name || "Software"}</strong>
+                      <strong>{name}</strong>
 
-                      <div className="other-rating">
-                        <Star
-                          className="small-stars"
-                          size={14}
-                          fill="currentColor"
-                          strokeWidth={1.5}
-                        />
-
-                        <span>{getRating(item)}</span>
-                      </div>
+                      {rating !== null && (
+                        <div className="other-rating">
+                          <Star
+                            className="small-stars"
+                            size={14}
+                            fill="currentColor"
+                            strokeWidth={1.5}
+                          />
+                          <span>{rating}</span>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Arrow */}
 
                     <span className="arrow">
                       <ArrowRight size={18} strokeWidth={2} />
@@ -687,23 +695,17 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
           </section>
         )}
 
-        {/* =====================================================
-            HELP CTA
-        ====================================================== */}
-
+        {/* Help CTA */}
         <section className="recommendation-help">
           <div className="help-content">
             <span className="section-eyebrow">NEED HELP?</span>
 
             <h2>Need help choosing?</h2>
 
-            <p>
-              Get free consultation from our software experts and find the right
-              solution for your business.
-            </p>
+            <p>Get help exploring implementation options for your business.</p>
 
             <Button onClick={handleImplementation}>
-              Request Free Consultation
+              Request Consultation
               <ArrowRight size={17} strokeWidth={2} />
             </Button>
           </div>
@@ -713,13 +715,8 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
           </div>
         </section>
 
-        {/* =====================================================
-            BOTTOM ACTIONS
-        ====================================================== */}
-
+        {/* Bottom Actions */}
         <section className="result-bottom-actions">
-          {/* Compare */}
-
           <div className="bottom-action">
             <div className="bottom-icon">
               <GitCompare size={24} strokeWidth={1.8} />
@@ -727,8 +724,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
 
             <div>
               <strong>Compare your top choices</strong>
-
-              <p>Compare features, pricing, and reviews side by side.</p>
+              <p>Compare available software options side by side.</p>
             </div>
 
             <button
@@ -736,17 +732,12 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
               onClick={handleCompareAll}
               disabled={!topRecommendations.length}
             >
-              Compare Now ({topRecommendations.length}
-              )
+              Compare Now ({topRecommendations.length})
               <ArrowRight size={16} strokeWidth={2} />
             </button>
           </div>
 
-          {/* Divider */}
-
           <div className="bottom-divider">or</div>
-
-          {/* Implementation */}
 
           <div className="bottom-action">
             <div className="bottom-icon">
@@ -755,8 +746,7 @@ function RecommendationResult({ answers = {}, result = {}, onRetake }) {
 
             <div>
               <strong>Request implementation help</strong>
-
-              <p>Get matched with verified implementation partners.</p>
+              <p>Explore implementation support for your selected software.</p>
             </div>
 
             <button type="button" onClick={handleImplementation}>

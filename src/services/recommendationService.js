@@ -1,132 +1,54 @@
 import api from "./api";
 
-/*
-|--------------------------------------------------------------------------
-| Recommendation Service
-|--------------------------------------------------------------------------
-|
-| Frontend wizard memiliki 8 jawaban:
-|
-| - business_type
-| - business_size
-| - industry
-| - key_needs
-| - must_have_features
-| - budget
-| - team_size
-| - integrations
-|
-| Backend recommendation endpoint:
-|
-| POST /recommendations
-|
-|--------------------------------------------------------------------------
-*/
-
 export async function getRecommendations(answers = {}) {
-  const {
-    business_type,
-    business_size,
-    industry,
-    key_needs,
-    must_have_features,
-    budget,
-    team_size,
-    integrations,
-  } = answers;
+  const cleanValue = (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Validation
-  |--------------------------------------------------------------------------
-  */
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : trimmed;
+  };
 
-  if (!business_type) {
-    throw new Error("Business type wajib dipilih.");
-  }
+  const cleanArray = (value) => {
+    if (!Array.isArray(value)) {
+      return [];
+    }
 
-  if (!business_size) {
-    throw new Error("Business size wajib dipilih.");
-  }
-
-  if (!industry) {
-    throw new Error("Industry wajib dipilih.");
-  }
-
-  if (!key_needs) {
-    throw new Error("Key needs wajib dipilih.");
-  }
-
-  if (!budget) {
-    throw new Error("Budget wajib dipilih.");
-  }
-
-  if (!team_size) {
-    throw new Error("Team size wajib dipilih.");
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Request Payload
-  |--------------------------------------------------------------------------
-  |
-  | Backend lama menggunakan `primary_need`.
-  | Wizard frontend menggunakan `key_needs`.
-  |
-  | Jadi kita mapping di sini.
-  |
-  */
+    return value
+      .filter((item) => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
 
   const payload = {
-    business_type,
-    business_size,
-    industry,
-
-    // Mapping frontend -> backend
-    primary_need: key_needs,
-
-    must_have_features: Array.isArray(must_have_features)
-      ? must_have_features
-      : [],
-
-    budget,
-
-    team_size,
-
-    integrations: Array.isArray(integrations) ? integrations : [],
+    business_type: cleanValue(answers.business_type),
+    business_size: cleanValue(answers.business_size),
+    industry: cleanValue(answers.industry),
+    primary_need: cleanValue(answers.key_needs ?? answers.primary_need),
+    must_have_features: cleanArray(answers.must_have_features),
+    budget: cleanValue(answers.budget),
+    team_size: cleanValue(answers.team_size),
+    integrations: cleanArray(answers.integrations),
   };
+
+  // Hapus jawaban yang kosong, tetapi pertahankan array kosong.
+  Object.keys(payload).forEach((key) => {
+    if (payload[key] === undefined) {
+      delete payload[key];
+    }
+  });
 
   console.log("Recommendation request payload:", payload);
 
-  /*
-  |--------------------------------------------------------------------------
-  | API Request
-  |--------------------------------------------------------------------------
-  */
-
   const response = await api.post("/recommendations", payload);
-
-  console.log("Recommendation API response:", response);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Normalize response
-  |--------------------------------------------------------------------------
-  |
-  | Support beberapa kemungkinan response Laravel:
-  |
-  | 1. { recommendations: [...] }
-  | 2. { data: { recommendations: [...] } }
-  | 3. { data: [...] }
-  | 4. [...]
-  |
-  */
-
   const data = response?.data;
 
   if (!data) {
     throw new Error("Recommendation API returned an empty response.");
   }
+
+  console.log("Recommendation API response:", data);
 
   return data;
 }

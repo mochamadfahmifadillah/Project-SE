@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -19,6 +20,7 @@ import {
 import PublicLayout from "../../layouts/PublicLayout";
 import RecommendationResult from "./RecommendationResult";
 import { getRecommendations } from "../../services/recommendationService";
+
 import tokopediaLogo from "../../assets/images/tokopedia.png";
 import bukalapakLogo from "../../assets/images/bukalapak.png";
 import travelokaLogo from "../../assets/images/traveloka.webp";
@@ -32,13 +34,6 @@ import bcaLogo from "../../assets/images/bca.png";
 |--------------------------------------------------------------------------
 | Recommendation Questions
 |--------------------------------------------------------------------------
-|
-| 8 Questions
-| + Summary
-| + Results
-| = 10 Steps
-|
-|--------------------------------------------------------------------------
 */
 
 const questions = [
@@ -46,7 +41,8 @@ const questions = [
     key: "business_type",
     label: "Business Type",
     question: "What type of business is your company?",
-    description: "This helps us understand your operational context better.",
+    description:
+      "This helps us understand your operational context better.",
     options: [
       {
         value: "B2B",
@@ -86,7 +82,6 @@ const questions = [
       },
     ],
   },
-
   {
     key: "business_size",
     label: "Business Size",
@@ -120,7 +115,6 @@ const questions = [
       },
     ],
   },
-
   {
     key: "industry",
     label: "Industry",
@@ -166,7 +160,6 @@ const questions = [
       },
     ],
   },
-
   {
     key: "key_needs",
     label: "Key Needs",
@@ -212,12 +205,12 @@ const questions = [
       },
     ],
   },
-
   {
     key: "must_have_features",
     label: "Must-have Features",
     question: "Which features are must-haves for you?",
-    description: "Select the capabilities that are essential to your workflow.",
+    description:
+      "Select the capabilities that are essential to your workflow.",
     multiple: true,
     options: [
       {
@@ -258,7 +251,6 @@ const questions = [
       },
     ],
   },
-
   {
     key: "budget",
     label: "Budget",
@@ -292,7 +284,6 @@ const questions = [
       },
     ],
   },
-
   {
     key: "team_size",
     label: "Team Size",
@@ -326,12 +317,12 @@ const questions = [
       },
     ],
   },
-
   {
     key: "integrations",
     label: "Integrations",
     question: "Which integrations are important to you?",
-    description: "Choose the tools your new software should work with.",
+    description:
+      "Choose the tools your new software should work with.",
     multiple: true,
     options: [
       {
@@ -374,44 +365,23 @@ const questions = [
   },
 ];
 
-/* =========================================================
-   TRUSTED BUSINESSES
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| Trusted Businesses
+|--------------------------------------------------------------------------
+*/
 
 const trustedBusinesses = [
-  {
-    name: "Tokopedia",
-    logo: tokopediaLogo,
-  },
-  {
-    name: "Bukalapak",
-    logo: bukalapakLogo,
-  },
-  {
-    name: "Traveloka",
-    logo: travelokaLogo,
-  },
-  {
-    name: "Ruangguru",
-    logo: ruangguruLogo,
-  },
-  {
-    name: "J&T Express",
-    logo: jntLogo,
-  },
-  {
-    name: "Sociolla",
-    logo: sociollaLogo,
-  },
-  {
-    name: "Mekari",
-    logo: mekariLogo,
-  },
-  {
-    name: "BCA",
-    logo: bcaLogo,
-  },
+  { name: "Tokopedia", logo: tokopediaLogo },
+  { name: "Bukalapak", logo: bukalapakLogo },
+  { name: "Traveloka", logo: travelokaLogo },
+  { name: "Ruangguru", logo: ruangguruLogo },
+  { name: "J&T Express", logo: jntLogo },
+  { name: "Sociolla", logo: sociollaLogo },
+  { name: "Mekari", logo: mekariLogo },
+  { name: "BCA", logo: bcaLogo },
 ];
+
 /*
 |--------------------------------------------------------------------------
 | Empty Answers
@@ -426,123 +396,93 @@ const createEmptyAnswers = () =>
 
 /*
 |--------------------------------------------------------------------------
+| Normalize Recommendation Response
+|--------------------------------------------------------------------------
+*/
+
+const normalizeRecommendationResponse = (response) => {
+  if (Array.isArray(response)) {
+    return { recommendations: response };
+  }
+
+  if (!response || typeof response !== "object") {
+    throw new Error("Recommendation API returned an invalid response.");
+  }
+
+  let normalized = response;
+
+  if (
+    normalized.data &&
+    typeof normalized.data === "object" &&
+    !Array.isArray(normalized.data)
+  ) {
+    normalized = normalized.data;
+  }
+
+  if (Array.isArray(normalized.data)) {
+    return { recommendations: normalized.data };
+  }
+
+  if (!Array.isArray(normalized.recommendations)) {
+    return {
+      ...normalized,
+      recommendations: [],
+    };
+  }
+
+  return normalized;
+};
+
+/*
+|--------------------------------------------------------------------------
 | Component
 |--------------------------------------------------------------------------
 */
 
 export default function Recommend() {
-  /*
-   * ---------------------------------------------------------------
-   * STEP STRUCTURE
-   * ---------------------------------------------------------------
-   *
-   * 0 - 7  = 8 questions
-   * 8      = Summary
-   * 9      = Results
-   *
-   * UI displays:
-   *
-   * 1 - 8  = Questions
-   * 9      = Summary
-   * 10     = Results
-   *
-   * ---------------------------------------------------------------
-   */
-
   const [step, setStep] = useState(0);
-
-  const [answers, setAnswers] = useState(createEmptyAnswers());
-
+  const [answers, setAnswers] = useState(createEmptyAnswers);
   const [result, setResult] = useState(null);
-
   const [loading, setLoading] = useState(false);
-
   const [error, setError] = useState("");
 
-  /*
-   * Total wizard steps.
-   *
-   * 8 questions + 1 summary + 1 result = 10
-   */
   const totalSteps = questions.length + 2;
-
-  /*
-   * Summary is step index 8.
-   */
   const isSummary = step === questions.length;
-
-  /*
-   * Result is step index 9.
-   */
   const isResult = step === questions.length + 1;
 
-  /*
-   * Current question only exists on question steps.
-   */
-  const currentQuestion = !isSummary && !isResult ? questions[step] : null;
+  const currentQuestion =
+    !isSummary && !isResult ? questions[step] : null;
 
-  /*
-   |--------------------------------------------------------------------------
-   | Progress
-   |--------------------------------------------------------------------------
-   */
+  const currentAnswer = currentQuestion
+    ? answers[currentQuestion.key]
+    : null;
 
   const progress = Math.min(((step + 1) / totalSteps) * 100, 100);
 
   /*
-   |--------------------------------------------------------------------------
-   | Current Answer
-   |--------------------------------------------------------------------------
-   */
-
-  const currentAnswer = currentQuestion ? answers[currentQuestion.key] : null;
-
-  /*
-   |--------------------------------------------------------------------------
-   | Check Current Answer
-   |--------------------------------------------------------------------------
-   */
-
-  const hasAnswer = currentQuestion
-    ? currentQuestion.multiple
-      ? Array.isArray(currentAnswer) && currentAnswer.length > 0
-      : Boolean(currentAnswer)
-    : true;
-
-  /*
-   |--------------------------------------------------------------------------
-   | Choose Answer
-   |--------------------------------------------------------------------------
-   */
+  |--------------------------------------------------------------------------
+  | Choose Answer
+  |--------------------------------------------------------------------------
+  */
 
   const chooseAnswer = (value) => {
-    if (!currentQuestion || loading) {
-      return;
-    }
+    if (!currentQuestion || loading) return;
 
     setError("");
 
     setAnswers((current) => {
-      /*
-       * Multiple selection
-       */
       if (currentQuestion.multiple) {
         const selected = current[currentQuestion.key] || [];
-
         const exists = selected.includes(value);
 
         return {
           ...current,
-
           [currentQuestion.key]: exists
             ? selected.filter((item) => item !== value)
             : [...selected, value],
         };
       }
 
-      /*
-       * Single selection
-       */
       return {
         ...current,
         [currentQuestion.key]: value,
@@ -551,260 +491,122 @@ export default function Recommend() {
   };
 
   /*
-   |--------------------------------------------------------------------------
-   | Get Display Value
-   |--------------------------------------------------------------------------
-   */
+  |--------------------------------------------------------------------------
+  | Get Answer Label
+  |--------------------------------------------------------------------------
+  */
 
   const getAnswerLabel = (question) => {
     const value = answers[question.key];
 
     if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return "Not selected";
-      }
-
-      return value.join(", ");
+      return value.length > 0 ? value.join(", ") : "Belum dijawab";
     }
 
-    return value || "Not selected";
+    return value || "Belum dijawab";
   };
 
   /*
-   |--------------------------------------------------------------------------
-   | Continue
-   |--------------------------------------------------------------------------
-   */
+  |--------------------------------------------------------------------------
+  | Skip Question
+  |--------------------------------------------------------------------------
+  */
+
+  const handleSkip = () => {
+    if (!currentQuestion || loading) return;
+
+    setError("");
+    setStep((current) => current + 1);
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Continue / Generate Recommendations
+  |--------------------------------------------------------------------------
+  */
 
   const handleContinue = async () => {
-    if (loading) {
-      return;
-    }
+    if (loading) return;
 
     setError("");
 
-    /*
-     * ===============================================================
-     * QUESTION STEP
-     * ===============================================================
-     */
-
+    // Semua pertanyaan bersifat opsional.
     if (!isSummary && !isResult) {
-      if (!hasAnswer) {
-        setError("Please select an answer before continuing.");
-
-        return;
-      }
-
       setStep((current) => current + 1);
-
       return;
     }
 
-    /*
-     * ===============================================================
-     * SUMMARY STEP
-     * ===============================================================
-     *
-     * Submit answers to backend.
-     */
+    if (!isSummary) return;
 
-    if (isSummary) {
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
-        console.log("========================================");
-        console.log("SOFTWARE EMPIRE - RECOMMENDATION REQUEST");
-        console.log("========================================");
+      console.log("Software Empire - Recommendation Request");
+      console.log("Answers:", answers);
 
-        console.log("Answers:", answers);
+      const response = await getRecommendations(answers);
+      const normalizedResult =
+        normalizeRecommendationResponse(response);
 
-        /*
-         * Call recommendation API.
-         */
-        const response = await getRecommendations(answers);
+      console.log(
+        "Software Empire - Normalized Recommendation Result:",
+        normalizedResult,
+      );
 
-        console.log("========================================");
-        console.log("SOFTWARE EMPIRE - RECOMMENDATION RESPONSE");
-        console.log("========================================");
+      setResult(normalizedResult);
+      setStep(questions.length + 1);
+    } catch (err) {
+      console.error("Software Empire - Recommendation Error:", err);
+      console.error("API response:", err?.response?.data);
 
-        console.log("Response:", response);
-
-        /*
-         * ---------------------------------------------------------
-         * Normalize API response
-         * ---------------------------------------------------------
-         *
-         * Supports:
-         *
-         * {
-         *   recommendations: [...]
-         * }
-         *
-         * {
-         *   data: {
-         *     recommendations: [...]
-         *   }
-         * }
-         *
-         * [...]
-         */
-
-        let normalizedResult = response;
-
-        /*
-         * Direct array response
-         */
-        if (Array.isArray(response)) {
-          normalizedResult = {
-            recommendations: response,
-          };
-        }
-
-        /*
-         * Laravel wrapped response:
-         *
-         * {
-         *   data: {
-         *      recommendations: [...]
-         *   }
-         * }
-         */
-        if (
-          normalizedResult?.data &&
-          typeof normalizedResult.data === "object"
-        ) {
-          if (Array.isArray(normalizedResult.data?.recommendations)) {
-            normalizedResult = normalizedResult.data;
-          }
-        }
-
-        /*
-         * If API returned:
-         *
-         * {
-         *   data: [...]
-         * }
-         */
-        if (Array.isArray(normalizedResult?.data)) {
-          normalizedResult = {
-            recommendations: normalizedResult.data,
-          };
-        }
-
-        /*
-         * Safety check.
-         */
-        if (!normalizedResult || typeof normalizedResult !== "object") {
-          throw new Error("Recommendation API returned an invalid response.");
-        }
-
-        /*
-         * Ensure recommendations exists.
-         */
-        if (!Array.isArray(normalizedResult.recommendations)) {
-          normalizedResult = {
-            ...normalizedResult,
-            recommendations: [],
-          };
-        }
-
-        console.log("Normalized recommendation result:", normalizedResult);
-
-        /*
-         * Save result.
-         */
-        setResult(normalizedResult);
-
-        /*
-         * Move to step 10.
-         *
-         * Array index:
-         *
-         * 0-7 = questions
-         * 8   = summary
-         * 9   = results
-         */
-        setStep(questions.length + 1);
-      } catch (err) {
-        console.error("========================================");
-
-        console.error("SOFTWARE EMPIRE - RECOMMENDATION ERROR");
-
-        console.error("========================================");
-
-        console.error(err);
-
-        console.error("API response:", err?.response?.data);
-
-        setError(
-          err?.response?.data?.message ||
-            err?.message ||
-            "Failed to generate recommendations. Please try again.",
-        );
-      } finally {
-        setLoading(false);
-      }
-
-      return;
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to generate recommendations. Please try again.",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   /*
-   |--------------------------------------------------------------------------
-   | Back
-   |--------------------------------------------------------------------------
-   */
+  |--------------------------------------------------------------------------
+  | Back
+  |--------------------------------------------------------------------------
+  */
 
   const handleBack = () => {
-    if (step === 0 || loading) {
-      return;
-    }
+    if (step === 0 || loading) return;
 
-    /*
-     * If somehow back is pressed from result,
-     * return to summary.
-     */
     if (isResult) {
       setStep(questions.length);
-
+      setError("");
       return;
     }
 
     setStep((current) => current - 1);
-
     setError("");
   };
 
   /*
-   |--------------------------------------------------------------------------
-   | Retake
-   |--------------------------------------------------------------------------
-   */
+  |--------------------------------------------------------------------------
+  | Retake
+  |--------------------------------------------------------------------------
+  */
 
   const handleRetake = () => {
     setStep(0);
-
     setAnswers(createEmptyAnswers());
-
     setResult(null);
-
     setError("");
-
     setLoading(false);
   };
 
   /*
-   |--------------------------------------------------------------------------
-   | Result
-   |--------------------------------------------------------------------------
-   |
-   | IMPORTANT:
-   |
-   | We pass `currentStep={10}` to the result page so it can show
-   | Results as the final wizard step.
-   |
-   */
+  |--------------------------------------------------------------------------
+  | Results Page
+  |--------------------------------------------------------------------------
+  */
 
   if (isResult && result) {
     return (
@@ -819,24 +621,22 @@ export default function Recommend() {
   }
 
   /*
-   |--------------------------------------------------------------------------
-   | Render Wizard
-   |--------------------------------------------------------------------------
-   */
+  |--------------------------------------------------------------------------
+  | Render Wizard
+  |--------------------------------------------------------------------------
+  */
 
   return (
     <PublicLayout>
       <main className="recommend-page">
         <div className="recommend-container">
-          {/* =====================================================
-              HEADER
-          ====================================================== */}
-
+          {/* Header */}
           <section className="recommend-stepper">
             <div className="stepper-top">
               <div>
-                <span className="recommend-eyebrow">SMART RECOMMENDATION</span>
-
+                <span className="recommend-eyebrow">
+                  SMART RECOMMENDATION
+                </span>
                 <h1>Recommendation Wizard</h1>
               </div>
 
@@ -845,21 +645,12 @@ export default function Recommend() {
               </div>
             </div>
 
-            {/* =====================================================
-                STEPPER
-            ====================================================== */}
-
             <div
               className="stepper"
-              style={{
-                "--recommend-progress": `${progress}%`,
-              }}
+              style={{ "--recommend-progress": `${progress}%` }}
             >
-              {/* QUESTIONS 1-8 */}
-
               {questions.map((question, index) => {
                 const active = index === step;
-
                 const completed = index < step;
 
                 return (
@@ -880,15 +671,10 @@ export default function Recommend() {
                         index + 1
                       )}
                     </div>
-
                     <span>{question.label}</span>
                   </div>
                 );
               })}
-
-              {/* =================================================
-                  SUMMARY - STEP 9
-              ================================================== */}
 
               <div
                 className={[
@@ -906,13 +692,8 @@ export default function Recommend() {
                     9
                   )}
                 </div>
-
                 <span>Summary</span>
               </div>
-
-              {/* =================================================
-                  RESULTS - STEP 10
-              ================================================== */}
 
               <div
                 className={["step-item", isResult ? "active" : ""]
@@ -920,26 +701,18 @@ export default function Recommend() {
                   .join(" ")}
               >
                 <div className="step-circle">10</div>
-
                 <span>Results</span>
               </div>
             </div>
           </section>
 
-          {/* =====================================================
-              WIZARD CARD
-          ====================================================== */}
-
+          {/* Wizard Card */}
           <section className="recommend-card">
-            {/* ===================================================
-                LEFT INFORMATION PANEL
-            ==================================================== */}
-
+            {/* Left Information Panel */}
             <aside className="recommend-info">
               <div className="recommend-illustration">
                 <div className="building-main">
                   <div className="building-roof" />
-
                   <div className="building-body">
                     <span />
                     <span />
@@ -963,14 +736,12 @@ export default function Recommend() {
                 </div>
 
                 <div className="cloud cloud-one" />
-
                 <div className="cloud cloud-two" />
               </div>
 
               <div className="why-box">
                 <div className="why-title">
                   <CircleHelp size={17} />
-
                   <strong>Why we ask this?</strong>
                 </div>
 
@@ -982,29 +753,23 @@ export default function Recommend() {
                 <div className="why-list">
                   <div>
                     <Sparkles size={15} />
-
                     <span>Personalized recommendation</span>
                   </div>
 
                   <div>
                     <Users size={15} />
-
                     <span>Save time & effort</span>
                   </div>
 
                   <div>
                     <Check size={15} />
-
                     <span>More accurate match</span>
                   </div>
                 </div>
               </div>
             </aside>
 
-            {/* ===================================================
-                QUESTION / SUMMARY
-            ==================================================== */}
-
+            {/* Question / Summary */}
             <div className="recommend-question">
               {!isSummary ? (
                 <>
@@ -1014,18 +779,16 @@ export default function Recommend() {
                     </span>
 
                     <h2>{currentQuestion.question}</h2>
-
                     <p>{currentQuestion.description}</p>
                   </div>
-
-                  {/* OPTIONS */}
 
                   <div className="recommend-options">
                     {currentQuestion.options.map((option) => {
                       const OptionIcon = option.icon;
 
                       const selected = currentQuestion.multiple
-                        ? currentAnswer.includes(option.value)
+                        ? Array.isArray(currentAnswer) &&
+                          currentAnswer.includes(option.value)
                         : currentAnswer === option.value;
 
                       return (
@@ -1047,12 +810,13 @@ export default function Recommend() {
 
                           <span className="option-copy">
                             <strong>{option.title}</strong>
-
                             <small>{option.description}</small>
                           </span>
 
                           <span className="option-check">
-                            {selected && <Check size={13} strokeWidth={3} />}
+                            {selected && (
+                              <Check size={13} strokeWidth={3} />
+                            )}
                           </span>
                         </button>
                       );
@@ -1061,62 +825,68 @@ export default function Recommend() {
                 </>
               ) : (
                 <>
-                  {/* =================================================
-                      SUMMARY
-                  ================================================== */}
-
+                  {/* Summary */}
                   <div className="question-heading summary-heading">
                     <span className="question-eyebrow">Summary</span>
-
                     <h2>Review your answers</h2>
-
                     <p>
-                      Make sure everything looks right before we find the best
-                      software for you.
+                      Review your answers before we find software that may
+                      fit your needs. You can leave any question unanswered.
                     </p>
                   </div>
 
                   <div className="recommend-summary">
-                    {questions.map((question, index) => (
-                      <div key={question.key} className="summary-item">
-                        <div className="summary-number">{index + 1}</div>
+                    {questions.map((question, index) => {
+                      const answerLabel = getAnswerLabel(question);
+                      const unanswered = answerLabel === "Belum dijawab";
 
-                        <div className="summary-content">
-                          <span>{question.label}</span>
-
-                          <strong>{getAnswerLabel(question)}</strong>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="summary-edit"
-                          onClick={() => setStep(index)}
-                          disabled={loading}
+                      return (
+                        <div
+                          key={question.key}
+                          className="summary-item"
                         >
-                          Edit
-                        </button>
-                      </div>
-                    ))}
+                          <div className="summary-number">
+                            {index + 1}
+                          </div>
+
+                          <div className="summary-content">
+                            <span>{question.label}</span>
+                            <strong
+                              className={
+                                unanswered ? "summary-unanswered" : ""
+                              }
+                            >
+                              {answerLabel}
+                            </strong>
+                          </div>
+
+                          <button
+                            type="button"
+                            className="summary-edit"
+                            onClick={() => {
+                              setError("");
+                              setStep(index);
+                            }}
+                            disabled={loading}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}
 
-              {/* =====================================================
-                  ERROR
-              ====================================================== */}
-
+              {/* Error */}
               {error && (
-                <div className="recommend-error">
+                <div className="recommend-error" role="alert">
                   <strong>Unable to generate recommendations</strong>
-
                   <span>{error}</span>
                 </div>
               )}
 
-              {/* =====================================================
-                  ACTIONS
-              ====================================================== */}
-
+              {/* Actions */}
               <div className="recommend-actions">
                 <button
                   type="button"
@@ -1129,9 +899,7 @@ export default function Recommend() {
                 </button>
 
                 <div className="action-progress">
-                  {Array.from({
-                    length: totalSteps,
-                  }).map((_, index) => (
+                  {Array.from({ length: totalSteps }).map((_, index) => (
                     <span
                       key={index}
                       className={index <= step ? "active" : ""}
@@ -1139,28 +907,38 @@ export default function Recommend() {
                   ))}
                 </div>
 
-                <button
-                  type="button"
-                  className="recommend-next"
-                  disabled={loading || (!isSummary && !hasAnswer)}
-                  onClick={handleContinue}
-                >
-                  {loading
-                    ? "Finding..."
-                    : isSummary
-                      ? "Get My Recommendations"
-                      : "Next"}
+                <div className="recommend-action-buttons">
+                  {!isSummary && (
+                    <button
+                      type="button"
+                      className="recommend-skip"
+                      disabled={loading}
+                      onClick={handleSkip}
+                    >
+                      Skip
+                    </button>
+                  )}
 
-                  <ArrowRight size={17} />
-                </button>
+                  <button
+                    type="button"
+                    className="recommend-next"
+                    disabled={loading}
+                    onClick={handleContinue}
+                  >
+                    {loading
+                      ? "Finding..."
+                      : isSummary
+                        ? "Get My Recommendations"
+                        : "Next"}
+
+                    <ArrowRight size={17} />
+                  </button>
+                </div>
               </div>
             </div>
           </section>
 
-          {/* =====================================================
-              SECURITY
-          ====================================================== */}
-
+          {/* Security */}
           <section className="recommend-security">
             <div className="security-icon">
               <ShieldCheck size={27} />
@@ -1168,7 +946,6 @@ export default function Recommend() {
 
             <div className="security-copy">
               <strong>Your data is safe with us</strong>
-
               <p>
                 We value your privacy and never share your information with
                 third parties.
@@ -1178,7 +955,6 @@ export default function Recommend() {
             <div className="security-items">
               <div>
                 <ShieldCheck size={21} />
-
                 <span>
                   <strong>GDPR</strong>
                   Compliant
@@ -1187,7 +963,6 @@ export default function Recommend() {
 
               <div>
                 <LockKeyhole size={21} />
-
                 <span>
                   <strong>Secure</strong>
                   Encryption
@@ -1196,7 +971,6 @@ export default function Recommend() {
 
               <div>
                 <ShieldCheck size={21} />
-
                 <span>
                   <strong>Privacy</strong>
                   Protected
@@ -1205,17 +979,17 @@ export default function Recommend() {
             </div>
           </section>
 
-          {/* =====================================================
-              TRUSTED
-          ====================================================== */}
-
+          {/* Trusted Businesses */}
           <section className="home-trusted">
             <div className="home-container">
               <p>Trusted by businesses worldwide</p>
 
               <div className="home-trusted-logos">
                 {trustedBusinesses.map((business) => (
-                  <div className="home-trusted-logo" key={business.name}>
+                  <div
+                    className="home-trusted-logo"
+                    key={business.name}
+                  >
                     <img
                       src={business.logo}
                       alt={business.name}
@@ -1227,19 +1001,14 @@ export default function Recommend() {
             </div>
           </section>
 
-          {/* =====================================================
-              JOURNEY
-          ====================================================== */}
-
+          {/* Journey */}
           <section className="recommend-journey">
             <div>
               <span className="journey-icon blue">
                 <CircleHelp size={22} />
               </span>
-
               <span>
                 <strong>Answer Questions</strong>
-
                 <small>about your business</small>
               </span>
             </div>
@@ -1250,11 +1019,9 @@ export default function Recommend() {
               <span className="journey-icon green">
                 <Sparkles size={22} />
               </span>
-
               <span>
                 <strong>Our AI analyzes</strong>
-
-                <small>thousands of software</small>
+                <small>software options</small>
               </span>
             </div>
 
@@ -1264,10 +1031,8 @@ export default function Recommend() {
               <span className="journey-icon purple">
                 <Sparkles size={22} />
               </span>
-
               <span>
                 <strong>Get personalized</strong>
-
                 <small>recommendations</small>
               </span>
             </div>
@@ -1278,10 +1043,8 @@ export default function Recommend() {
               <span className="journey-icon orange">
                 <WalletCards size={22} />
               </span>
-
               <span>
                 <strong>Compare & choose</strong>
-
                 <small>the best fit</small>
               </span>
             </div>
