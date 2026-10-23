@@ -1,0 +1,187 @@
+/* Software picker modal for Compare.jsx */
+.software-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 55%);
+}
+
+.software-picker-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 16px;
+  background: var(--card-bg, #fff);
+  color: var(--text-color, #222);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 20%);
+}
+
+.software-picker-header,
+.software-picker-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.software-picker-header h2 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+}
+
+.software-picker-header p {
+  margin: 0;
+  color: var(--muted-color, #666);
+}
+
+.software-picker-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 1.75rem;
+  cursor: pointer;
+}
+
+.software-picker-count {
+  margin-top: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.software-picker-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 20px;
+}
+
+.software-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.software-picker-option.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1e293b;
+}
+
+.software-picker-option.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.software-picker-option input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
+.software-picker-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.software-picker-logo .comparison-logo-image {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.software-picker-logo .comparison-logo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 700;
+}
+
+.software-picker-details {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.software-picker-details strong {
+  overflow-wrap: anywhere;
+}
+
+.software-picker-details small {
+  color: var(--muted-color, #666);
+}
+
+.software-picker-empty,
+.software-picker-error {
+  margin: 12px 0;
+}
+
+.software-picker-error {
+  color: #b91c1c;
+}
+
+.software-picker-actions {
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.software-picker-actions button {
+  padding: 10px 16px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.software-picker-confirm {
+  border-color: #2563eb !important;
+  background: #2563eb;
+  color: #fff;
+}
+
+.software-picker-confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 480px) {
+  .software-picker-overlay {
+    padding: 12px;
+  }
+
+  .software-picker-modal {
+    padding: 18px;
+  }
+
+  .software-picker-actions {
+    flex-wrap: wrap;
+  }
+}

@@ -15,6 +15,7 @@ import PublicLayout from "../../layouts/PublicLayout";
 import { getSoftware } from "../../services/softwareService";
 import { compareSoftware } from "../../services/compareService";
 import "../../styles/compare.css";
+import "../../styles/compare-picker.css";
 
 import zohoLogo from "../../assets/logos/zoho.svg";
 import hubspotLogo from "../../assets/logos/Hubspot.png";
@@ -184,6 +185,10 @@ function Compare() {
   const [activeSection, setActiveSection] = useState("Features");
   const [saved, setSaved] = useState(false);
 
+  // Software picker modal state
+  const [showSoftwarePicker, setShowSoftwarePicker] = useState(false);
+  const [pendingSelection, setPendingSelection] = useState([]);
+
   // =====================================================
   // LOAD CATALOG
   // =====================================================
@@ -210,20 +215,14 @@ function Compare() {
 
         setSoftware(availableSoftware);
 
+        // Keep only existing user selections that are still available.
+        // Do not automatically select products when the page loads.
         setSelected((current) => {
           const availableIds = new Set(availableSoftware.map(getSoftwareId));
 
-          const validSelected = current
+          return current
             .filter((id) => availableIds.has(String(id)))
             .slice(0, MAX_SOFTWARE);
-
-          if (validSelected.length >= MIN_SOFTWARE) {
-            return validSelected;
-          }
-
-          return availableSoftware
-            .slice(0, MAX_SOFTWARE)
-            .map((item) => item.id);
         });
 
         console.log(
@@ -348,28 +347,6 @@ function Compare() {
     setSaved(false);
   };
 
-  const toggle = (id) => {
-    const alreadySelected = selected.some(
-      (itemId) => String(itemId) === String(id),
-    );
-
-    if (alreadySelected) {
-      setSelected((current) =>
-        current.filter((itemId) => String(itemId) !== String(id)),
-      );
-    } else {
-      if (selected.length >= MAX_SOFTWARE) {
-        setError("You can compare a maximum of 3 software products.");
-        return;
-      }
-
-      setSelected((current) => [...current, id]);
-    }
-
-    setError(null);
-    resetComparison();
-  };
-
   const removeSoftware = (id) => {
     setSelected((current) =>
       current.filter((itemId) => String(itemId) !== String(id)),
@@ -385,11 +362,48 @@ function Compare() {
       return;
     }
 
-    const available = software.find(
-      (item) => !selected.some((id) => String(id) === String(item.id)),
-    );
+    // Open the picker instead of automatically adding the first catalog item.
+    setPendingSelection([...selected]);
+    setShowSoftwarePicker(true);
+    setError(null);
+  };
 
-    if (available) toggle(available.id);
+  const togglePendingSoftware = (id) => {
+    setPendingSelection((current) => {
+      const alreadySelected = current.some(
+        (itemId) => String(itemId) === String(id),
+      );
+
+      if (alreadySelected) {
+        return current.filter((itemId) => String(itemId) !== String(id));
+      }
+
+      if (current.length >= MAX_SOFTWARE) {
+        return current;
+      }
+
+      return [...current, id];
+    });
+
+    setError(null);
+  };
+
+  const confirmSoftwareSelection = () => {
+    if (pendingSelection.length < MIN_SOFTWARE) {
+      setError("Select at least 2 software products to compare.");
+      return;
+    }
+
+    if (pendingSelection.length > MAX_SOFTWARE) {
+      setError("You can compare a maximum of 3 software products.");
+      return;
+    }
+
+    setSelected([...pendingSelection]);
+    setComparison(null);
+    setSaved(false);
+    setShowSoftwarePicker(false);
+    setError(null);
   };
 
   // =====================================================
@@ -674,6 +688,108 @@ function Compare() {
             </button>
           )}
         </section>
+
+        {showSoftwarePicker && (
+          <div
+            className="software-picker-overlay"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                setShowSoftwarePicker(false);
+              }
+            }}
+          >
+            <div
+              className="software-picker-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="software-picker-title"
+            >
+              <div className="software-picker-header">
+                <div>
+                  <h2 id="software-picker-title">Choose Software</h2>
+                  <p>Select 2–3 software products to compare.</p>
+                </div>
+                <button
+                  type="button"
+                  className="software-picker-close"
+                  onClick={() => setShowSoftwarePicker(false)}
+                  aria-label="Close software selection"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="software-picker-count">
+                Selected: {pendingSelection.length}/{MAX_SOFTWARE}
+              </div>
+
+              <div className="software-picker-list">
+                {software.map((item) => {
+                  const id = getSoftwareId(item);
+                  const isSelected = pendingSelection.some(
+                    (selectedId) => String(selectedId) === id,
+                  );
+                  const isDisabled =
+                    !isSelected && pendingSelection.length >= MAX_SOFTWARE;
+
+                  return (
+                    <label
+                      key={id}
+                      className={`software-picker-option${
+                        isSelected ? " selected" : ""
+                      }${isDisabled ? " disabled" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={isDisabled}
+                        onChange={() => togglePendingSoftware(item.id)}
+                      />
+                      <span className="software-picker-logo">
+                        {getLogo(item)}
+                      </span>
+                      <span className="software-picker-details">
+                        <strong>{item.name}</strong>
+                        <small>{item.category || "Software"}</small>
+                      </span>
+                      {isSelected && <Check size={18} aria-hidden="true" />}
+                    </label>
+                  );
+                })}
+
+                {software.length === 0 && (
+                  <p className="software-picker-empty">
+                    No software is available to select.
+                  </p>
+                )}
+              </div>
+
+              {error && (
+                <p className="software-picker-error" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <div className="software-picker-actions">
+                <button
+                  type="button"
+                  className="software-picker-cancel"
+                  onClick={() => setShowSoftwarePicker(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="software-picker-confirm"
+                  onClick={confirmSoftwareSelection}
+                  disabled={pendingSelection.length < MIN_SOFTWARE}
+                >
+                  Confirm Selection
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="compare-inline-error" role="alert">
